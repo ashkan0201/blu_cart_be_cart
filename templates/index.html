@@ -716,6 +716,221 @@
       to { opacity: 1; transform: translateY(0); }
     }
 
+    /* ========== Transfer Progress ========== */
+    .transfer-stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.6rem;
+      margin-bottom: 1rem;
+      flex-shrink: 0;
+    }
+    .stat-box {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(168, 85, 247, 0.2);
+      border-radius: 14px;
+      padding: 0.85rem 0.5rem;
+      text-align: center;
+    }
+    .stat-box .stat-num {
+      font-size: 1.35rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      direction: ltr;
+      unicode-bidi: isolate;
+    }
+    .stat-box .stat-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 0.25rem;
+    }
+    .stat-box.success .stat-num { color: #86efac; }
+    .stat-box.fail .stat-num { color: #fca5a5; }
+    .stat-box.pending .stat-num { color: var(--accent-light); }
+
+    .transfer-current {
+      background: rgba(168, 85, 247, 0.12);
+      border: 1px solid rgba(168, 85, 247, 0.35);
+      border-radius: 14px;
+      padding: 0.9rem 1rem;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex-shrink: 0;
+    }
+    .transfer-current .spinner {
+      width: 28px;
+      height: 28px;
+      border: 3px solid rgba(168, 85, 247, 0.25);
+      border-top-color: var(--accent-light);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      flex-shrink: 0;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .transfer-current-info {
+      flex: 1;
+      min-width: 0;
+      text-align: right;
+    }
+    .transfer-current-info .label {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-bottom: 0.2rem;
+    }
+    .transfer-current-info .value {
+      font-size: 0.95rem;
+      font-weight: 600;
+      direction: ltr;
+      text-align: right;
+      unicode-bidi: isolate;
+      letter-spacing: 0.04em;
+    }
+    .transfer-current.done {
+      background: rgba(34, 197, 94, 0.12);
+      border-color: rgba(34, 197, 94, 0.35);
+    }
+    .transfer-current.done .spinner {
+      display: none;
+    }
+    .transfer-current .done-icon {
+      display: none;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+      align-items: center;
+      justify-content: center;
+      font-size: 0.9rem;
+      flex-shrink: 0;
+    }
+    .transfer-current.done .done-icon {
+      display: flex;
+    }
+
+    .progress-bar-wrap {
+      height: 6px;
+      background: rgba(0, 0, 0, 0.4);
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 1rem;
+      flex-shrink: 0;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--accent), var(--accent-light));
+      border-radius: 10px;
+      transition: width 0.4s ease;
+    }
+
+    .transfer-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 14px;
+      padding: 0.85rem 1rem;
+      border: 1px solid rgba(168, 85, 247, 0.12);
+      transition: all 0.3s ease;
+    }
+    .transfer-item.processing {
+      border-color: var(--accent-light);
+      box-shadow: 0 0 16px rgba(168, 85, 247, 0.25);
+      background: rgba(168, 85, 247, 0.08);
+    }
+    .transfer-item.success {
+      border-color: rgba(34, 197, 94, 0.4);
+      background: rgba(34, 197, 94, 0.08);
+    }
+    .transfer-item.failed {
+      border-color: rgba(239, 68, 68, 0.4);
+      background: rgba(239, 68, 68, 0.08);
+    }
+    .transfer-status-badge {
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 0.25rem 0.55rem;
+      border-radius: 8px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .transfer-status-badge.pending {
+      background: rgba(168, 85, 247, 0.15);
+      color: var(--text-muted);
+    }
+    .transfer-status-badge.processing {
+      background: rgba(168, 85, 247, 0.3);
+      color: var(--accent-light);
+    }
+    .transfer-status-badge.success {
+      background: rgba(34, 197, 94, 0.25);
+      color: #86efac;
+    }
+    .transfer-status-badge.failed {
+      background: rgba(239, 68, 68, 0.25);
+      color: #fca5a5;
+    }
+    .transfer-item-msg {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      margin-top: 0.15rem;
+      direction: rtl;
+      text-align: right;
+    }
+    .mini-spinner {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border: 2px solid rgba(168, 85, 247, 0.3);
+      border-top-color: var(--accent-light);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-left: 0.3rem;
+    }
+
+    .transfer-footer-btns {
+      display: flex;
+      gap: 0.6rem;
+      flex-shrink: 0;
+      margin-top: 0.25rem;
+    }
+    .transfer-footer-btns .btn {
+      flex: 1;
+      padding: 0.95rem 1rem;
+      font-size: 0.95rem;
+      border-radius: 14px;
+    }
+
+    /* حالت خطا و کارت‌های اجرا نشده */
+    .transfer-current.error {
+      background: rgba(239, 68, 68, 0.12);
+      border-color: rgba(239, 68, 68, 0.4);
+    }
+    .transfer-current.error .done-icon {
+      background: linear-gradient(135deg, #ef4444, #b91c1c);
+    }
+    .transfer-current.error .transfer-current-info .value {
+      direction: rtl;
+      unicode-bidi: plaintext;
+      letter-spacing: 0;
+      font-size: 0.85rem;
+      font-weight: 500;
+      line-height: 1.7;
+    }
+    .transfer-item.skipped { opacity: 0.6; }
+    .transfer-status-badge.skipped {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-muted);
+    }
+    .transfer-status-badge.need_otp {
+      background: rgba(245, 158, 11, 0.25);
+      color: #fcd34d;
+    }
+
     @media (max-width: 640px) {
       .app { padding: 1rem 0.85rem 1rem; max-width: 100%; }
       .glass-card { padding: 1rem; }
@@ -724,6 +939,9 @@
       .btn { padding: 0.4rem 0.65rem; font-size: 0.75rem; }
       header h1 { font-size: 1.3rem; }
       .nav-btn { font-size: 0.75rem; padding: 0.4rem 0.7rem; }
+      .transfer-stats { gap: 0.4rem; }
+      .stat-box { padding: 0.7rem 0.35rem; }
+      .stat-box .stat-num { font-size: 1.15rem; }
     }
     @media (min-width: 900px) {
       .app { max-width: 860px; padding: 1.75rem 2rem 1.5rem; }
@@ -737,7 +955,7 @@
     <!-- ========== صفحه اصلی ========== -->
     <div class="page active" id="page-main">
       <header>
-        <button class="nav-btn right" id="go-profile-btn" title="پروفایل">
+        <button class="nav-btn" id="go-profile-btn" title="پروفایل">
           👤 پروفایل
         </button>
         <h1>کارت به کارت به روش حاج اشکان</h1>
@@ -853,6 +1071,62 @@
         💾 ذخیره اطلاعات و همگام‌سازی با صفحه اصلی
       </button>
     </div>
+
+    <!-- ========== صفحه پیشرفت انتقال ========== -->
+    <div class="page" id="page-transfer">
+      <header>
+        <button class="nav-btn" id="transfer-back-btn" title="بازگشت" style="display: none;">
+          ← صفحه اصلی
+        </button>
+        <h1>در حال انتقال</h1>
+        <p id="transfer-subtitle">لطفاً تا پایان عملیات صبر کنید</p>
+      </header>
+
+      <div class="transfer-stats">
+        <div class="stat-box success">
+          <div class="stat-num" id="stat-success">۰</div>
+          <div class="stat-label">موفق</div>
+        </div>
+        <div class="stat-box fail">
+          <div class="stat-num" id="stat-fail">۰</div>
+          <div class="stat-label">ناموفق</div>
+        </div>
+        <div class="stat-box pending">
+          <div class="stat-num" id="stat-total">۰</div>
+          <div class="stat-label">کل</div>
+        </div>
+      </div>
+
+      <div class="progress-bar-wrap">
+        <div class="progress-bar-fill" id="progress-bar-fill"></div>
+      </div>
+
+      <div class="transfer-current" id="transfer-current-box">
+        <div class="spinner"></div>
+        <div class="done-icon">✓</div>
+        <div class="transfer-current-info">
+          <div class="label" id="transfer-current-label">در حال انتقال به</div>
+          <div class="value" id="transfer-current-value">—</div>
+        </div>
+      </div>
+
+      <div class="glass-card cards-panel" style="margin-bottom: 0.75rem;">
+        <div class="section-header">
+          <div class="section-header-right">
+            <div class="icon">📋</div>
+            <span>وضعیت کارت‌ها</span>
+          </div>
+          <span class="card-count" id="transfer-progress-text">۰ از ۰</span>
+        </div>
+        <div class="card-list-wrapper">
+          <div class="card-list" id="transfer-card-list"></div>
+        </div>
+      </div>
+
+      <div class="transfer-footer-btns">
+        <button class="btn btn-primary" id="transfer-done-btn" style="display: none;">بازگشت به صفحه اصلی</button>
+      </div>
+    </div>
   </div>
 
   <!-- Success Modal -->
@@ -888,6 +1162,42 @@
         <button class="btn btn-primary" id="unsaved-save" style="width: 100%; padding: 0.85rem;">ذخیره و خروج</button>
         <button class="btn btn-danger" id="unsaved-discard" style="width: 100%; padding: 0.85rem;">خروج بدون ذخیره</button>
         <button class="btn btn-secondary" id="unsaved-cancel" style="width: 100%; padding: 0.85rem;">ماندن در پروفایل</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- OTP Modal (فقط وقتی پایتون need_otp بفرستد) -->
+  <div class="modal-overlay" id="otp-modal">
+    <div class="modal" style="max-width: 340px; padding: 1.75rem 1.5rem;">
+      <div class="modal-icon" style="background: linear-gradient(135deg, #a855f7, #7c3aed); width: 56px; height: 56px; font-size: 1.5rem;">🔐</div>
+      <h3 style="font-size: 1.15rem; margin-bottom: 0.35rem;">کد تأیید</h3>
+      <p id="otp-modal-message" style="margin-bottom: 1.1rem; font-size: 0.88rem;">کد ۶ رقمی ارسال‌شده را وارد کنید</p>
+      <input type="text" id="otp-modal-input" class="form-input" maxlength="6" inputmode="numeric" autocomplete="one-time-code" placeholder="------" dir="ltr" style="text-align: center; letter-spacing: 0.35em; font-size: 1.35rem; font-weight: 700; direction: ltr; margin-bottom: 1rem;">
+      <div style="display: flex; gap: 0.5rem; width: 100%;">
+        <button class="btn btn-primary" id="otp-modal-submit" style="flex: 1; padding: 0.8rem;">تأیید</button>
+        <button class="btn btn-secondary" id="otp-modal-cancel" style="flex: 1; padding: 0.8rem;">بعداً</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Card Modal -->
+  <div class="modal-overlay" id="add-card-modal">
+    <div class="modal">
+      <div class="modal-icon" style="background: linear-gradient(135deg, #a855f7, #7c3aed);">💳</div>
+      <h3 id="add-card-modal-title">افزودن کارت</h3>
+      <p style="margin-bottom: 1rem;">شماره کارت و نام مالک حساب را وارد کنید</p>
+      <div class="form-group" style="text-align: right; margin-bottom: 0.85rem;">
+        <label class="form-label" for="add-card-number">شماره کارت</label>
+        <input type="text" class="form-input" id="add-card-number" placeholder="XXXX-XXXX-XXXX-XXXX" maxlength="19" inputmode="numeric" dir="ltr" style="text-align: center; letter-spacing: 0.08em; direction: ltr;">
+      </div>
+      <div class="form-group" style="text-align: right; margin-bottom: 1.25rem;">
+        <label class="form-label" for="add-card-owner">نام مالک حساب</label>
+        <input type="text" class="form-input" id="add-card-owner" placeholder="مالک حساب" dir="rtl">
+      </div>
+      <div style="display: flex; gap: 0.6rem; width: 100%;">
+        <button class="btn btn-primary" id="add-card-confirm" style="flex: 1; padding: 0.85rem;">افزودن</button>
+        <button class="btn btn-secondary" id="add-card-cancel" style="flex: 1; padding: 0.85rem;">انصراف</button>
       </div>
     </div>
   </div>
@@ -1275,6 +1585,10 @@
             return;
           }
         }
+        if (newNumber !== 'XXXX-XXXX-XXXX-XXXX' && isDuplicateCard(newNumber, cards, id)) {
+          showToast('این شماره کارت قبلاً در لیست وجود دارد', '⚠️');
+          return;
+        }
         const card = cards.find(c => c.id === id);
         if (card) {
           card.number = newNumber;
@@ -1320,32 +1634,93 @@
     document.getElementById('main-card-list').addEventListener('click', e => handleCardAction(e, false));
 
     // ========== Add Card ==========
+    let addCardTarget = null; // 'primary' | 'secondary'
+
+    function normalizeCardDigits(number) {
+      return String(number || '').replace(/\D/g, '').slice(0, 16);
+    }
+
+    function isDuplicateCard(number, cards, excludeId) {
+      const digits = normalizeCardDigits(number);
+      if (digits.length !== 16) return false;
+      return cards.some(c => c.id !== excludeId && normalizeCardDigits(c.number) === digits);
+    }
+
+    function openAddCardModal(target) {
+      addCardTarget = target;
+      const title = document.getElementById('add-card-modal-title');
+      title.textContent = target === 'primary' ? 'افزودن کارت به لیست اصلی' : 'افزودن کارت به لیست فرعی';
+      document.getElementById('add-card-number').value = '';
+      document.getElementById('add-card-owner').value = '';
+      document.getElementById('add-card-modal').classList.add('show');
+      setTimeout(() => document.getElementById('add-card-number').focus(), 100);
+    }
+
+    function closeAddCardModal() {
+      document.getElementById('add-card-modal').classList.remove('show');
+      addCardTarget = null;
+    }
+
+    document.getElementById('add-card-number').addEventListener('input', function() {
+      this.value = formatCardNumber(this.value);
+    });
+
     document.getElementById('profile-add-card-btn').addEventListener('click', function(e) {
       createRipple(e, this);
-      primaryCards.push({
-        id: nextId++,
-        number: 'XXXX-XXXX-XXXX-XXXX',
-        owner: 'مالک حساب'
-      });
-      // فقط در حافظه — ذخیره نهایی با دکمه ذخیره پروفایل
-      renderPrimaryCards();
-      const wrapper = document.querySelector('#page-profile .card-list-wrapper');
-      setTimeout(() => { if (wrapper) wrapper.scrollTop = wrapper.scrollHeight; }, 50);
-      showToast('کارت اضافه شد (هنوز ذخیره نهایی نشده)', '➕');
+      openAddCardModal('primary');
     });
 
     document.getElementById('main-add-card-btn').addEventListener('click', function(e) {
       createRipple(e, this);
-      secondaryCards.push({
+      openAddCardModal('secondary');
+    });
+
+    document.getElementById('add-card-confirm').addEventListener('click', function(e) {
+      createRipple(e, this);
+      const rawNumber = document.getElementById('add-card-number').value;
+      const owner = document.getElementById('add-card-owner').value.trim() || 'مالک حساب';
+      const digits = normalizeCardDigits(rawNumber);
+
+      if (digits.length !== 16) {
+        showToast('شماره کارت باید ۱۶ رقم باشد', '⚠️');
+        return;
+      }
+
+      const formatted = formatCardNumber(digits);
+      const cards = addCardTarget === 'primary' ? primaryCards : secondaryCards;
+
+      if (isDuplicateCard(formatted, cards)) {
+        showToast('این شماره کارت قبلاً در لیست وجود دارد', '⚠️');
+        return;
+      }
+
+      cards.push({
         id: nextId++,
-        number: 'XXXX-XXXX-XXXX-XXXX',
-        owner: 'مالک حساب'
+        number: formatted,
+        owner: owner
       });
-      saveSecondary();
-      renderSecondaryCards();
-      const wrapper = document.querySelector('#page-main .card-list-wrapper');
-      setTimeout(() => { if (wrapper) wrapper.scrollTop = wrapper.scrollHeight; }, 50);
-      showToast('کارت به لیست فرعی اضافه شد (روی لیست اصلی تأثیر ندارد)', '➕');
+
+      if (addCardTarget === 'primary') {
+        renderPrimaryCards();
+        const wrapper = document.querySelector('#page-profile .card-list-wrapper');
+        setTimeout(() => { if (wrapper) wrapper.scrollTop = wrapper.scrollHeight; }, 50);
+        showToast('کارت اضافه شد (هنوز ذخیره نهایی نشده)', '➕');
+      } else {
+        saveSecondary();
+        renderSecondaryCards();
+        const wrapper = document.querySelector('#page-main .card-list-wrapper');
+        setTimeout(() => { if (wrapper) wrapper.scrollTop = wrapper.scrollHeight; }, 50);
+        showToast('کارت به لیست فرعی اضافه شد (روی لیست اصلی تأثیر ندارد)', '➕');
+      }
+      closeAddCardModal();
+    });
+
+    document.getElementById('add-card-cancel').addEventListener('click', function(e) {
+      createRipple(e, this);
+      closeAddCardModal();
+    });
+    document.getElementById('add-card-modal').addEventListener('click', function(e) {
+      if (e.target === this) closeAddCardModal();
     });
 
     document.getElementById('main-refresh-btn').addEventListener('click', function(e) {
@@ -1442,7 +1817,402 @@
       this.value = formatAmount(this.value);
     });
 
-    // ========== Transfer ==========
+    // ========== Transfer API ==========
+    // آدرس سرور پایتون خود را اینجا تنظیم کنید
+    const TRANSFER_API = {
+      base: '', // همان سروری که صفحه را داده (Flask)؛ با localhost و 127.0.0.1 هر دو کار می‌کند
+      start: '/api/transfer',
+      status: '/api/transfer/status',
+      active: '/api/transfer/active',
+      otp: '/api/transfer/otp',
+      pollIntervalMs: 800
+    };
+
+    let transferJobId = null;
+    let transferPollTimer = null;
+    let transferResults = []; // { id, number, owner, status, message }
+    let transferRunning = false;
+
+    const STATUS_LABEL = {
+      pending: 'در انتظار',
+      processing: 'در حال انتقال',
+      success: 'موفق',
+      failed: 'ناموفق',
+      skipped: 'اجرا نشد',
+      need_otp: 'نیاز به OTP'
+    };
+
+    function showOtpModal(show, message) {
+      const modal = document.getElementById('otp-modal');
+      if (!modal) return;
+      if (show) {
+        const msg = document.getElementById('otp-modal-message');
+        if (msg) msg.textContent = message || 'کد ۶ رقمی ارسال‌شده را وارد کنید';
+        const inp = document.getElementById('otp-modal-input');
+        if (inp) {
+          inp.value = '';
+          setTimeout(() => inp.focus(), 100);
+        }
+        modal.classList.add('show');
+      } else {
+        modal.classList.remove('show');
+      }
+    }
+
+    function stopTransferPoll() {
+      if (transferPollTimer) {
+        clearInterval(transferPollTimer);
+        transferPollTimer = null;
+      }
+      transferRunning = false;
+    }
+
+    function renderTransferList() {
+      const list = document.getElementById('transfer-card-list');
+      list.innerHTML = '';
+      transferResults.forEach((item, index) => {
+        const el = document.createElement('div');
+        el.className = 'transfer-item ' + (item.status || 'pending');
+        const badgeClass = item.status || 'pending';
+        const badgeText = STATUS_LABEL[badgeClass] || badgeClass;
+        const spinner = item.status === 'processing' ? '<span class="mini-spinner"></span>' : '';
+        const msg = item.message ? `<div class="transfer-item-msg">${item.message}</div>` : '';
+        el.innerHTML = `
+          <div class="card-avatar">${avatarSVG()}</div>
+          <div class="card-info">
+            <div class="card-number">${item.number}</div>
+            <div class="card-owner">${item.owner || 'مالک حساب'} · کارت ${toPersianDigits(index + 1)}</div>
+            ${msg}
+          </div>
+          <span class="transfer-status-badge ${badgeClass}">${spinner}${badgeText}</span>
+        `;
+        list.appendChild(el);
+      });
+    }
+
+    function updateTransferUI(data) {
+      const results = data.results || transferResults;
+      if (Array.isArray(results) && results.length) {
+        // merge by id or index
+        results.forEach((r, i) => {
+          if (transferResults[i]) {
+            Object.assign(transferResults[i], r);
+          } else if (r.id != null) {
+            const found = transferResults.find(t => t.id === r.id);
+            if (found) Object.assign(found, r);
+            else transferResults.push(r);
+          } else {
+            transferResults.push(r);
+          }
+        });
+      }
+
+      const successCount = transferResults.filter(r => r.status === 'success').length;
+      const failCount = transferResults.filter(r => r.status === 'failed').length;
+      const total = transferResults.length;
+      const doneCount = successCount + failCount;
+
+      document.getElementById('stat-success').textContent = toPersianDigits(successCount);
+      document.getElementById('stat-fail').textContent = toPersianDigits(failCount);
+      document.getElementById('stat-total').textContent = toPersianDigits(total);
+      document.getElementById('transfer-progress-text').textContent =
+        `${toPersianDigits(doneCount)} از ${toPersianDigits(total)}`;
+
+      const pct = total ? Math.round((doneCount / total) * 100) : 0;
+      document.getElementById('progress-bar-fill').style.width = pct + '%';
+
+      const currentBox = document.getElementById('transfer-current-box');
+      const currentLabel = document.getElementById('transfer-current-label');
+      const currentValue = document.getElementById('transfer-current-value');
+      const subtitle = document.getElementById('transfer-subtitle');
+
+      const processing = transferResults.find(r => r.status === 'processing');
+      const overall = data.status || (doneCount >= total && total > 0 ? 'completed' : 'running');
+
+      if (overall === 'need_otp' || data.need_otp) {
+        currentBox.classList.remove('done');
+        currentLabel.textContent = 'در انتظار کد تأیید';
+        currentValue.textContent = data.current_card || data.otp_hint || 'کد OTP را وارد کنید';
+        subtitle.textContent = data.otp_message || 'سیستم درخواست OTP کرده است';
+        // فقط اگر مودال باز نیست، باز کن تا ورودی کاربر پاک نشود
+        const otpModal = document.getElementById('otp-modal');
+        if (!otpModal.classList.contains('show')) {
+          showOtpModal(true, data.otp_message || 'کد ۶ رقمی ارسال‌شده را وارد کنید');
+        }
+        document.getElementById('transfer-done-btn').style.display = 'none';
+      } else if (overall === 'completed' || overall === 'failed' || (doneCount >= total && total > 0 && overall !== 'running' && overall !== 'need_otp')) {
+        showOtpModal(false);
+        currentBox.classList.add('done');
+        const doneIcon = currentBox.querySelector('.done-icon');
+        if (data.error) {
+          // خطای سرور/بلو به همان شکل به کاربر نشان داده می‌شود
+          currentBox.classList.add('error');
+          if (doneIcon) doneIcon.textContent = '✕';
+          currentLabel.textContent = 'عملیات متوقف شد';
+          currentValue.textContent = data.error;
+          subtitle.textContent = `${toPersianDigits(successCount)} انتقال موفق قبل از توقف`;
+        } else {
+          currentBox.classList.remove('error');
+          if (doneIcon) doneIcon.textContent = '✓';
+          currentLabel.textContent = 'عملیات تمام شد';
+          currentValue.textContent =
+            `${toPersianDigits(successCount)} موفق · ${toPersianDigits(failCount)} ناموفق`;
+          subtitle.textContent = 'نتیجهٔ انتقال‌ها آماده است';
+        }
+        document.getElementById('transfer-done-btn').style.display = 'block';
+        document.getElementById('transfer-back-btn').style.display = 'flex';
+        stopTransferPoll();
+      } else if (processing) {
+        showOtpModal(false);
+        currentBox.classList.remove('done');
+        currentLabel.textContent = 'در حال انتقال به';
+        currentValue.textContent = processing.number + (processing.owner ? ` · ${processing.owner}` : '');
+        subtitle.textContent = 'لطفاً تا پایان عملیات صبر کنید';
+      } else if (data.current_card) {
+        showOtpModal(false);
+        currentBox.classList.remove('done');
+        currentLabel.textContent = 'در حال انتقال به';
+        currentValue.textContent = data.current_card;
+      } else {
+        showOtpModal(false);
+        currentBox.classList.remove('done');
+        currentLabel.textContent = 'در حال آماده‌سازی';
+        currentValue.textContent = '—';
+      }
+
+      renderTransferList();
+    }
+
+    // پیام خطای JSON سرور را به Error تبدیل می‌کند (status و data هم روی آن می‌ماند)
+    async function apiError(res) {
+      let data = null;
+      try { data = await res.json(); } catch (e) { /* بدنه JSON نبود */ }
+      const err = new Error((data && data.error) || ('HTTP ' + res.status));
+      err.status = res.status;
+      err.data = data;
+      return err;
+    }
+
+    async function startTransferJob(payload) {
+      const res = await fetch(TRANSFER_API.base + TRANSFER_API.start, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) throw await apiError(res);
+      return res.json();
+    }
+
+    async function fetchTransferStatus(jobId) {
+      const res = await fetch(TRANSFER_API.base + TRANSFER_API.status + '/' + encodeURIComponent(jobId));
+      if (!res.ok) throw await apiError(res);
+      return res.json();
+    }
+
+    // نمایش خطا در صفحه‌ی انتقال (خطای شروع کار، قطع ارتباط، گم شدن کار روی سرور)
+    function failTransferUI(message) {
+      showOtpModal(false);
+      transferResults.forEach(r => {
+        if (r.status === 'processing') {
+          r.status = 'failed';
+          r.message = message;
+        } else if (r.status === 'pending') {
+          r.status = 'skipped';
+          r.message = 'اجرا نشد';
+        }
+      });
+      updateTransferUI({ status: 'failed', error: message });
+    }
+
+    // اتصال به کاری که از قبل روی سرور در جریان است (رفرش صفحه یا شروع دوباره‌ی هم‌زمان)
+    async function attachToJob(jobId) {
+      transferJobId = jobId;
+      transferResults = [];
+      document.getElementById('transfer-done-btn').style.display = 'none';
+      document.getElementById('transfer-back-btn').style.display = 'none';
+      document.getElementById('transfer-current-box').classList.remove('done', 'error');
+      showOtpModal(false);
+      showPage('page-transfer');
+      try {
+        const data = await fetchTransferStatus(jobId);
+        updateTransferUI(data);
+        if (data.status !== 'completed' && data.status !== 'failed') startPolling(jobId);
+      } catch (err) {
+        failTransferUI(err.message || 'دریافت وضعیت انتقال ممکن نشد');
+      }
+    }
+
+    function startPolling(jobId) {
+      stopTransferPoll();
+      transferRunning = true;
+      let failures = 0;
+      transferPollTimer = setInterval(async () => {
+        try {
+          const data = await fetchTransferStatus(jobId);
+          failures = 0;
+          updateTransferUI(data);
+          if (data.status === 'completed' || data.status === 'failed') {
+            stopTransferPoll();
+          }
+          // need_otp: polling ادامه دارد تا OTP ارسال شود و وضعیت عوض شود
+        } catch (err) {
+          console.error('poll error', err);
+          failures++;
+          if (err.status === 404) {
+            stopTransferPoll();
+            failTransferUI(err.message);
+          } else if (failures >= 8) {
+            stopTransferPoll();
+            failTransferUI('ارتباط با سرور قطع شد؛ وضعیت انتقال نامشخص است');
+          }
+        }
+      }, TRANSFER_API.pollIntervalMs);
+    }
+
+    async function submitTransferOtp(jobId, otp) {
+      const res = await fetch(TRANSFER_API.base + TRANSFER_API.otp, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ job_id: jobId, otp: String(otp).trim() })
+      });
+      if (!res.ok) throw await apiError(res);
+      return res.json();
+    }
+
+    // حالت دمو اگر سرور پایتون در دسترس نباشد
+    function runDemoTransfer() {
+      let i = 0;
+      transferRunning = true;
+      const tick = () => {
+        if (i > 0) {
+          transferResults[i - 1].status = Math.random() > 0.15 ? 'success' : 'failed';
+          transferResults[i - 1].message =
+            transferResults[i - 1].status === 'success' ? 'انتقال انجام شد' : 'خطا در انتقال';
+        }
+        if (i < transferResults.length) {
+          transferResults[i].status = 'processing';
+          transferResults[i].message = 'در حال ارسال...';
+          updateTransferUI({ status: 'running', current_card: transferResults[i].number });
+          i++;
+          transferPollTimer = setTimeout(tick, 1200);
+        } else {
+          updateTransferUI({ status: 'completed' });
+          stopTransferPoll();
+        }
+      };
+      tick();
+    }
+
+    function openTransferPage(cards, amount) {
+      transferResults = cards.map(c => ({
+        id: c.id,
+        number: c.number,
+        owner: c.owner,
+        status: 'pending',
+        message: ''
+      }));
+      document.getElementById('transfer-done-btn').style.display = 'none';
+      document.getElementById('transfer-back-btn').style.display = 'none';
+      document.getElementById('progress-bar-fill').style.width = '0%';
+      document.getElementById('transfer-current-box').classList.remove('done', 'error');
+      document.getElementById('transfer-subtitle').textContent = 'لطفاً تا پایان عملیات صبر کنید';
+      showOtpModal(false);
+      updateTransferUI({ status: 'running' });
+      showPage('page-transfer');
+
+      // یوزر/پسورد بلو دیگر از مرورگر فرستاده نمی‌شود؛ سرور از دیتابیس (پروفایل) می‌خواند
+      const payload = {
+        amount: String(amount),
+        cards: cards.map(c => ({
+          id: c.id,
+          number: c.number.replace(/-/g, ''),
+          owner: c.owner
+        }))
+      };
+
+      startTransferJob(payload)
+        .then(data => {
+          transferJobId = data.job_id || data.jobId || null;
+          if (data.results) updateTransferUI(data);
+          else updateTransferUI(data);
+          if (transferJobId) {
+            startPolling(transferJobId);
+          } else if (data.status === 'completed' || data.results) {
+            updateTransferUI(data);
+          } else {
+            updateTransferUI(Object.assign({ status: 'completed' }, data));
+          }
+        })
+        .catch(err => {
+          if (err.status === 409 && err.data && err.data.job_id) {
+            // یک انتقال دیگر در حال اجراست؛ به همان وصل می‌شویم
+            showToast('یک انتقال دیگر در حال اجراست — وضعیت همان نمایش داده می‌شود', 'ℹ️');
+            attachToJob(err.data.job_id);
+            return;
+          }
+          // دیگر حالت نمایشی (دمو) خودکار اجرا نمی‌شود؛ خطای واقعی به کاربر نشان داده می‌شود
+          const msg = err.status ? err.message : 'ارتباط با سرور پایتون برقرار نشد';
+          console.error('transfer start failed:', err);
+          showToast(msg, '⚠️');
+          failTransferUI(msg);
+        });
+    }
+
+    async function handleOtpSubmit() {
+      const inp = document.getElementById('otp-modal-input');
+      const otp = (inp.value || '').trim();
+      if (!/^\d{6}$/.test(otp)) {
+        showToast('کد OTP باید ۶ رقم باشد', '⚠️');
+        return;
+      }
+      if (!transferJobId) {
+        showOtpModal(false);
+        showToast('OTP ثبت شد (بدون سرور)', '✓');
+        return;
+      }
+      const btn = document.getElementById('otp-modal-submit');
+      try {
+        btn.disabled = true;
+        const data = await submitTransferOtp(transferJobId, otp);
+        showToast('OTP ارسال شد', '✓');
+        showOtpModal(false);
+        updateTransferUI(data);
+        if (!transferPollTimer && data.status !== 'completed' && data.status !== 'failed') {
+          startPolling(transferJobId);
+        }
+      } catch (err) {
+        console.error(err);
+        showToast(err.status ? err.message : 'خطا در ارسال OTP', '⚠️');
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    document.getElementById('otp-modal-submit').addEventListener('click', function(e) {
+      createRipple(e, this);
+      handleOtpSubmit();
+    });
+    document.getElementById('otp-modal-cancel').addEventListener('click', function(e) {
+      createRipple(e, this);
+      showOtpModal(false);
+      showToast('منتظر پاسخ سرور می‌مانیم', 'ℹ️');
+    });
+    document.getElementById('otp-modal').addEventListener('click', function(e) {
+      if (e.target === this) {
+        // با کلیک بیرون بسته نشود تا کاربر مجبور به تصمیم باشد — فقط انصراف
+      }
+    });
+    document.getElementById('otp-modal-input').addEventListener('input', function() {
+      this.value = this.value.replace(/\D/g, '').slice(0, 6);
+      if (this.value.length === 6) {
+        // اختیاری: خودکار ارسال نشود؛ کاربر تأیید بزند
+      }
+    });
+    document.getElementById('otp-modal-input').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') handleOtpSubmit();
+    });
+
+
     document.getElementById('transfer-btn').addEventListener('click', function(e) {
       createRipple(e, this);
 
@@ -1463,12 +2233,23 @@
         return;
       }
 
-      const formattedAmount = formatAmount(amount);
-      document.getElementById('modal-message').textContent =
-        `مبلغ ${toPersianDigits(formattedAmount)} ریال به ${toPersianDigits(secondaryCards.length)} حساب با موفقیت منتقل شد.`;
-
-      document.getElementById('success-modal').classList.add('show');
+      openTransferPage(deepClone(secondaryCards), amount);
       setTimeout(() => { amountInput.value = ''; }, 400);
+    });
+
+    document.getElementById('transfer-done-btn').addEventListener('click', function(e) {
+      createRipple(e, this);
+      stopTransferPoll();
+      showPage('page-main');
+    });
+    document.getElementById('transfer-back-btn').addEventListener('click', function(e) {
+      createRipple(e, this);
+      if (transferRunning) {
+        showToast('انتقال هنوز تمام نشده است', '⚠️');
+        return;
+      }
+      stopTransferPoll();
+      showPage('page-main');
     });
 
     document.getElementById('close-modal').addEventListener('click', function(e) {
@@ -1489,6 +2270,17 @@
     }
     renderSecondaryCards();
     refreshSnapshot();
+
+    // خطای ذخیره در دیتابیس (از sync.js) را به کاربر نشان بده
+    window.addEventListener('blu:sync-error', e => {
+      showToast('ذخیره در دیتابیس ناموفق بود: ' + (e.detail || ''), '⚠️');
+    });
+
+    // اگر انتقالی هنوز روی سرور در جریان است (مثلاً صفحه رفرش شده)، به آن وصل شو
+    fetch(TRANSFER_API.base + TRANSFER_API.active)
+      .then(r => (r.ok ? r.json() : null))
+      .then(data => { if (data && data.job && data.job.job_id) attachToJob(data.job.job_id); })
+      .catch(() => { /* سرور در دسترس نبود؛ مشکلی نیست */ });
     // صفحه اصلی به‌صورت پیش‌فرض نمایش داده می‌شود
     // برای شروع از پروفایل: showPage('page-profile');
   </script>

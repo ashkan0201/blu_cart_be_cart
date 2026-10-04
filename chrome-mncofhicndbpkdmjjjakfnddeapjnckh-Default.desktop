@@ -1,0 +1,8 @@
+[Desktop Entry]
+Version=1.0
+Terminal=false
+Type=Application
+Name=ḃlu
+Exec=/opt/google/chrome/google-chrome --profile-directory=Default --app-id=mncofhicndbpkdmjjjakfnddeapjnckh
+Icon=chrome-mncofhicndbpkdmjjjakfnddeapjnckh-Default
+StartupWMClass=crx_mncofhicndbpkdmjjjakfnddeapjnckh

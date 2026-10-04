@@ -1,0 +1,1496 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>کارت به کارت به روش حاج اشکان</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700&display=swap');
+
+    :root {
+      --bg-dark: #0a0a0f;
+      --bg-purple: #1a0a2e;
+      --accent: #a855f7;
+      --accent-light: #c084fc;
+      --accent-dark: #7c3aed;
+      --glow: rgba(168, 85, 247, 0.4);
+      --glass: rgba(255, 255, 255, 0.05);
+      --glass-border: rgba(168, 85, 247, 0.25);
+      --text: #f3e8ff;
+      --text-muted: #a78bfa;
+      --success: #22c55e;
+      --danger: #ef4444;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+    }
+
+    body {
+      font-family: 'Vazirmatn', system-ui, sans-serif;
+      background: var(--bg-dark);
+      color: var(--text);
+      position: relative;
+    }
+
+    #bubble-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .app {
+      position: relative;
+      z-index: 1;
+      max-width: 780px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 1.5rem 1.5rem 1.25rem;
+      height: 100vh;
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      box-sizing: border-box;
+      overflow: hidden;
+    }
+
+    /* Pages */
+    .page {
+      display: none;
+      flex-direction: column;
+      height: 100%;
+      overflow: hidden;
+      animation: fadeIn 0.35s ease;
+    }
+    .page.active {
+      display: flex;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 1rem;
+      flex-shrink: 0;
+      position: relative;
+    }
+
+    header h1 {
+      font-size: clamp(1.4rem, 5vw, 1.85rem);
+      font-weight: 700;
+      background: linear-gradient(135deg, #e9d5ff, #a855f7, #7c3aed);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.35rem;
+    }
+
+    header p {
+      color: var(--text-muted);
+      font-size: 0.88rem;
+      font-weight: 300;
+    }
+
+    .nav-btn {
+      position: absolute;
+      top: 0;
+      left: 0;
+      background: rgba(168, 85, 247, 0.15);
+      border: 1px solid rgba(168, 85, 247, 0.35);
+      color: var(--accent-light);
+      padding: 0.45rem 0.85rem;
+      border-radius: 12px;
+      font-family: inherit;
+      font-size: 0.82rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+    .nav-btn:hover {
+      background: rgba(168, 85, 247, 0.28);
+      border-color: var(--accent);
+    }
+    .nav-btn.right {
+      left: auto;
+      right: 0;
+    }
+
+    .glass-card {
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      border-radius: 20px;
+      padding: 1.25rem;
+      backdrop-filter: blur(20px);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      margin-bottom: 1rem;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      flex-shrink: 0;
+    }
+
+    .glass-card.cards-panel {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 1rem;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+      padding: 0 0.25rem;
+      flex-shrink: 0;
+    }
+
+    .section-header-right {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .section-header-right .icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: rgba(168, 85, 247, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.85rem;
+    }
+
+    .card-count {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      background: rgba(168, 85, 247, 0.12);
+      padding: 0.25rem 0.7rem;
+      border-radius: 20px;
+    }
+
+    .add-card-btn {
+      width: 100%;
+      padding: 0.9rem;
+      font-size: 0.95rem;
+      margin-bottom: 1rem;
+      border: 1.5px dashed rgba(168, 85, 247, 0.45);
+      background: transparent;
+      color: var(--accent-light);
+      border-radius: 14px;
+      cursor: pointer;
+      font-family: inherit;
+      font-weight: 500;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      flex-shrink: 0;
+    }
+    .add-card-btn:hover {
+      background: rgba(168, 85, 247, 0.1);
+      border-color: var(--accent);
+    }
+
+    .card-list-wrapper {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding-left: 4px;
+      margin-left: -4px;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(168, 85, 247, 0.4) transparent;
+    }
+    .card-list-wrapper::-webkit-scrollbar { width: 5px; }
+    .card-list-wrapper::-webkit-scrollbar-track { background: transparent; }
+    .card-list-wrapper::-webkit-scrollbar-thumb {
+      background: rgba(168, 85, 247, 0.4);
+      border-radius: 10px;
+    }
+
+    .card-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .card-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 14px;
+      padding: 0.85rem 1rem;
+      border: 1px solid rgba(168, 85, 247, 0.12);
+      transition: all 0.3s ease;
+    }
+    .card-item:hover {
+      border-color: rgba(168, 85, 247, 0.35);
+      background: rgba(168, 85, 247, 0.06);
+    }
+    .card-item.editing {
+      border-color: var(--accent-light);
+      box-shadow: 0 0 16px rgba(168, 85, 247, 0.2);
+      flex-wrap: wrap;
+      gap: 0.6rem;
+    }
+
+    .card-avatar {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #7c3aed, #a855f7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      box-shadow: 0 3px 10px rgba(124, 58, 237, 0.4);
+    }
+    .card-avatar svg {
+      width: 20px;
+      height: 20px;
+      fill: white;
+    }
+
+    .card-info {
+      flex: 1;
+      min-width: 0;
+      text-align: right;
+      direction: rtl;
+    }
+
+    .card-number {
+      font-size: 0.95rem;
+      font-weight: 500;
+      letter-spacing: 0.06em;
+      font-variant-numeric: tabular-nums;
+      color: var(--text);
+      direction: ltr;
+      text-align: right;
+      unicode-bidi: isolate;
+    }
+
+    .card-owner {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-top: 0.15rem;
+      direction: rtl;
+      text-align: right;
+    }
+
+    .card-actions {
+      display: flex;
+      gap: 0.4rem;
+      flex-shrink: 0;
+    }
+
+    .btn {
+      position: relative;
+      padding: 0.45rem 0.85rem;
+      font-size: 0.8rem;
+      font-weight: 500;
+      font-family: inherit;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      overflow: hidden;
+      transition: all 0.25s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.3rem;
+      white-space: nowrap;
+      text-align: center;
+    }
+    .btn-edit {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .btn-edit:hover {
+      background: rgba(255, 255, 255, 0.14);
+      border-color: var(--accent);
+    }
+    .btn-danger {
+      background: rgba(239, 68, 68, 0.15);
+      color: #fca5a5;
+      border: 1px solid rgba(239, 68, 68, 0.25);
+    }
+    .btn-danger:hover {
+      background: rgba(239, 68, 68, 0.28);
+    }
+    .btn-success {
+      background: rgba(34, 197, 94, 0.2);
+      color: #86efac;
+      border: 1px solid rgba(34, 197, 94, 0.35);
+    }
+    .btn-success:hover {
+      background: rgba(34, 197, 94, 0.35);
+    }
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-muted);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.12);
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+      color: white;
+      box-shadow: 0 4px 16px rgba(168, 85, 247, 0.35);
+      border: none;
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(168, 85, 247, 0.5);
+    }
+
+    .edit-fields {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      min-width: 0;
+    }
+
+    .card-edit-input {
+      width: 100%;
+      padding: 0.6rem 0.85rem;
+      font-size: 0.95rem;
+      font-family: inherit;
+      background: rgba(0, 0, 0, 0.45);
+      border: 1px solid var(--accent);
+      border-radius: 10px;
+      color: var(--text);
+      outline: none;
+      letter-spacing: 0.08em;
+      direction: ltr;
+      text-align: center;
+      transition: box-shadow 0.3s ease;
+    }
+    .card-edit-input:focus {
+      box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.25);
+    }
+
+    .card-edit-owner {
+      width: 100%;
+      padding: 0.55rem 0.85rem;
+      font-size: 0.85rem;
+      font-family: inherit;
+      background: rgba(0, 0, 0, 0.45);
+      border: 1px solid rgba(168, 85, 247, 0.4);
+      border-radius: 10px;
+      color: var(--text);
+      outline: none;
+      direction: rtl;
+      text-align: right;
+      transition: box-shadow 0.3s ease;
+    }
+    .card-edit-owner:focus {
+      box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.25);
+      border-color: var(--accent);
+    }
+
+    .edit-actions {
+      display: flex;
+      gap: 0.4rem;
+      width: 100%;
+      justify-content: center;
+    }
+
+    .amount-section { margin-top: 0; flex-shrink: 0; }
+
+    .amount-label {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      margin-bottom: 0.75rem;
+      text-align: right;
+      font-weight: 500;
+    }
+
+    .amount-input-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .amount-currency {
+      position: absolute;
+      left: 1rem;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .amount-input {
+      width: 100%;
+      padding: 1rem 1.25rem 1rem 4.5rem;
+      font-size: 1.15rem;
+      font-weight: 600;
+      font-family: inherit;
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(168, 85, 247, 0.25);
+      border-radius: 14px;
+      color: var(--text);
+      outline: none;
+      direction: ltr;
+      text-align: center;
+      letter-spacing: 0.03em;
+      transition: all 0.3s ease;
+    }
+    .amount-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.25);
+    }
+
+    .amount-hint {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-top: 0.6rem;
+      text-align: center;
+      opacity: 0.85;
+    }
+
+    .transfer-all-btn {
+      width: 100%;
+      padding: 1.15rem 1.5rem;
+      font-size: 1.05rem;
+      font-weight: 600;
+      font-family: inherit;
+      border: none;
+      border-radius: 16px;
+      cursor: pointer;
+      background: linear-gradient(135deg, #a855f7, #7c3aed);
+      color: white;
+      box-shadow: 0 6px 24px rgba(168, 85, 247, 0.4);
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      margin-top: 0.25rem;
+      flex-shrink: 0;
+    }
+    .transfer-all-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 32px rgba(168, 85, 247, 0.55);
+    }
+    .transfer-all-btn:active { transform: translateY(0); }
+    .transfer-all-btn:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .card-index-label {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-top: 0.15rem;
+      direction: rtl;
+      text-align: right;
+      opacity: 0.9;
+    }
+    .card-index-badge {
+      display: inline-block;
+      background: rgba(168, 85, 247, 0.15);
+      color: var(--accent-light);
+      padding: 0.1rem 0.45rem;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      margin-right: 0.35rem;
+    }
+
+    /* Profile form fields */
+    .form-group {
+      margin-bottom: 1rem;
+    }
+    .form-label {
+      display: block;
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      margin-bottom: 0.45rem;
+      font-weight: 500;
+    }
+    .form-input {
+      width: 100%;
+      padding: 0.85rem 1rem;
+      font-size: 0.95rem;
+      font-family: inherit;
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(168, 85, 247, 0.25);
+      border-radius: 12px;
+      color: var(--text);
+      outline: none;
+      direction: rtl;
+      text-align: right;
+      transition: all 0.3s ease;
+    }
+    .form-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.25);
+    }
+    .form-hint {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-top: 0.4rem;
+      opacity: 0.85;
+    }
+    .current-value {
+      font-size: 0.85rem;
+      color: var(--accent-light);
+      margin-top: 0.35rem;
+      background: rgba(168, 85, 247, 0.1);
+      padding: 0.35rem 0.7rem;
+      border-radius: 8px;
+      display: inline-block;
+    }
+
+    .save-settings-btn {
+      width: 100%;
+      padding: 1rem 1.5rem;
+      font-size: 1rem;
+      font-weight: 600;
+      font-family: inherit;
+      border: none;
+      border-radius: 14px;
+      cursor: pointer;
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+      color: white;
+      box-shadow: 0 6px 20px rgba(34, 197, 94, 0.35);
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+      flex-shrink: 0;
+    }
+    .save-settings-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 28px rgba(34, 197, 94, 0.45);
+    }
+
+    .profile-scroll {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding-left: 4px;
+      margin-left: -4px;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(168, 85, 247, 0.4) transparent;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 2rem 1rem;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+    .empty-state span {
+      display: block;
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+      opacity: 0.6;
+    }
+
+    /* Modal & Toast */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+    .modal-overlay.show {
+      opacity: 1;
+      pointer-events: all;
+    }
+    .modal {
+      background: linear-gradient(160deg, #1a0a2e, #0f0618);
+      border: 1px solid var(--glass-border);
+      border-radius: 24px;
+      padding: 2.25rem;
+      text-align: center;
+      max-width: 380px;
+      width: 90%;
+      transform: scale(0.85) translateY(20px);
+      transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+      box-shadow: 0 20px 60px rgba(168, 85, 247, 0.25);
+    }
+    .modal-overlay.show .modal {
+      transform: scale(1) translateY(0);
+    }
+    .modal-icon {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.2rem;
+      margin: 0 auto 1.25rem;
+      animation: successPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s both;
+    }
+    @keyframes successPop {
+      from { transform: scale(0); }
+      to { transform: scale(1); }
+    }
+    .modal h3 { font-size: 1.3rem; margin-bottom: 0.5rem; }
+    .modal p {
+      color: var(--text-muted);
+      margin-bottom: 1.5rem;
+      line-height: 1.7;
+      font-size: 0.95rem;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 2rem;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: linear-gradient(135deg, #1a0a2e, #2e1065);
+      border: 1px solid var(--accent);
+      color: white;
+      padding: 0.9rem 1.5rem;
+      border-radius: 14px;
+      font-size: 0.9rem;
+      z-index: 200;
+      box-shadow: 0 10px 40px rgba(168, 85, 247, 0.3);
+      transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .ripple {
+      position: absolute;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.35);
+      transform: scale(0);
+      animation: rippleAnim 0.6s linear;
+      pointer-events: none;
+    }
+    @keyframes rippleAnim {
+      to { transform: scale(4); opacity: 0; }
+    }
+    @keyframes fadeInDown {
+      from { opacity: 0; transform: translateY(-20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-width: 640px) {
+      .app { padding: 1rem 0.85rem 1rem; max-width: 100%; }
+      .glass-card { padding: 1rem; }
+      .card-item { padding: 0.75rem 0.85rem; }
+      .card-number { font-size: 0.85rem; }
+      .btn { padding: 0.4rem 0.65rem; font-size: 0.75rem; }
+      header h1 { font-size: 1.3rem; }
+      .nav-btn { font-size: 0.75rem; padding: 0.4rem 0.7rem; }
+    }
+    @media (min-width: 900px) {
+      .app { max-width: 860px; padding: 1.75rem 2rem 1.5rem; }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="bubble-canvas"></canvas>
+
+  <div class="app">
+    <!-- ========== صفحه اصلی ========== -->
+    <div class="page active" id="page-main">
+      <header>
+        <button class="nav-btn right" id="go-profile-btn" title="پروفایل">
+          👤 پروفایل
+        </button>
+        <h1>کارت به کارت به روش حاج اشکان</h1>
+        <p>یطوری کارت به کارت بکن پشمات بریزه</p>
+      </header>
+
+      <div class="glass-card cards-panel">
+        <div class="section-header">
+          <div class="section-header-right">
+            <div class="icon">💳</div>
+            <span>کارت‌های مقصد (لیست فرعی)</span>
+          </div>
+          <span class="card-count" id="main-card-count">۰ کارت</span>
+        </div>
+
+        <div class="main-list-actions" style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; flex-shrink: 0;">
+          <button class="add-card-btn" id="main-add-card-btn" style="margin-bottom: 0; flex: 1;">
+            ＋ افزودن کارت به این لیست
+          </button>
+          <button type="button" id="main-refresh-btn" title="بارگذاری مجدد از لیست اصلی" style="
+            flex-shrink: 0;
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
+            border: 1px solid rgba(168, 85, 247, 0.4);
+            background: rgba(168, 85, 247, 0.12);
+            color: #c084fc;
+            font-size: 1.05rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.25s ease;
+            font-family: inherit;
+            padding: 0;
+            line-height: 1;
+          ">🔄</button>
+        </div>
+
+        <div class="card-list-wrapper">
+          <div class="card-list" id="main-card-list"></div>
+        </div>
+      </div>
+
+      <div class="glass-card amount-section">
+        <div class="amount-label">مبلغ واریزی برای هر حساب (ریال)</div>
+        <div class="amount-input-wrapper">
+          <span class="amount-currency">ریال</span>
+          <input type="text" class="amount-input" id="amount" placeholder="۰" inputmode="numeric">
+        </div>
+        <div class="amount-hint" id="amount-hint">همین مبلغ به همهٔ حساب‌ها واریز می‌شود</div>
+      </div>
+
+      <button class="transfer-all-btn" id="transfer-btn">
+        ↗ ارسال به کارت‌ها
+      </button>
+    </div>
+
+    <!-- ========== صفحه پروفایل ========== -->
+    <div class="page" id="page-profile">
+      <header>
+        <button class="nav-btn" id="go-main-btn" title="بازگشت">
+          ← صفحه اصلی
+        </button>
+        <h1>پروفایل</h1>
+        <p>تنظیمات حساب و لیست اصلی کارت‌ها</p>
+      </header>
+
+      <div class="profile-scroll">
+        <!-- اطلاعات بلو بانک -->
+        <div class="glass-card">
+          <div class="section-header">
+            <div class="section-header-right">
+              <div class="icon">🏦</div>
+              <span>اطلاعات بلو بانک</span>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="blue-username">یوزرنیم بلو بانک</label>
+            <input type="text" class="form-input" id="blue-username" placeholder="یوزرنیم خود را وارد کنید" autocomplete="username" dir="rtl">
+            <div class="form-hint" id="username-current"></div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="blue-password">پسورد بلو بانک</label>
+            <input type="text" class="form-input" id="blue-password" placeholder="پسورد خود را وارد کنید" autocomplete="off" dir="rtl">
+            <div class="form-hint" id="password-current"></div>
+          </div>
+        </div>
+
+        <!-- لیست اصلی کارت‌ها -->
+        <div class="glass-card cards-panel" style="min-height: 280px;">
+          <div class="section-header">
+            <div class="section-header-right">
+              <div class="icon">📋</div>
+              <span>لیست اصلی کارت‌ها (تنظیمات)</span>
+            </div>
+            <span class="card-count" id="profile-card-count">۰ کارت</span>
+          </div>
+
+          <button class="add-card-btn" id="profile-add-card-btn">
+            ＋ افزودن کارت به لیست اصلی
+          </button>
+
+          <div class="card-list-wrapper">
+            <div class="card-list" id="profile-card-list"></div>
+          </div>
+        </div>
+      </div>
+
+      <button class="save-settings-btn" id="save-settings-btn">
+        💾 ذخیره اطلاعات و همگام‌سازی با صفحه اصلی
+      </button>
+    </div>
+  </div>
+
+  <!-- Success Modal -->
+  <div class="modal-overlay" id="success-modal">
+    <div class="modal">
+      <div class="modal-icon">✓</div>
+      <h3>انتقال موفق!</h3>
+      <p id="modal-message">مبلغ با موفقیت به همه حساب‌ها منتقل شد.</p>
+      <button class="btn btn-primary" id="close-modal" style="width: 100%; padding: 0.85rem;">باشه</button>
+    </div>
+  </div>
+
+  <!-- Confirm Save Modal -->
+  <div class="modal-overlay" id="confirm-save-modal">
+    <div class="modal">
+      <div class="modal-icon" style="background: linear-gradient(135deg, #a855f7, #7c3aed);">💾</div>
+      <h3>تأیید ذخیره</h3>
+      <p>آیا از ذخیره اطلاعات و همگام‌سازی لیست اصلی با صفحه اصلی مطمئن هستید؟</p>
+      <div style="display: flex; gap: 0.6rem; width: 100%;">
+        <button class="btn btn-primary" id="confirm-save-yes" style="flex: 1; padding: 0.85rem;">بله، ذخیره شود</button>
+        <button class="btn btn-secondary" id="confirm-save-no" style="flex: 1; padding: 0.85rem;">انصراف</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Unsaved Changes Modal -->
+  <div class="modal-overlay" id="unsaved-modal">
+    <div class="modal">
+      <div class="modal-icon" style="background: linear-gradient(135deg, #f59e0b, #d97706);">⚠️</div>
+      <h3>تغییرات ذخیره نشده</h3>
+      <p>شما تغییراتی در پروفایل ایجاد کرده‌اید که ذخیره نشده‌اند. در صورت خروج بدون ذخیره، همان اطلاعات قبلی باقی می‌مانند.</p>
+      <div style="display: flex; flex-direction: column; gap: 0.6rem; width: 100%;">
+        <button class="btn btn-primary" id="unsaved-save" style="width: 100%; padding: 0.85rem;">ذخیره و خروج</button>
+        <button class="btn btn-danger" id="unsaved-discard" style="width: 100%; padding: 0.85rem;">خروج بدون ذخیره</button>
+        <button class="btn btn-secondary" id="unsaved-cancel" style="width: 100%; padding: 0.85rem;">ماندن در پروفایل</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast">
+    <span id="toast-icon">✓</span>
+    <span id="toast-text">انجام شد</span>
+  </div>
+
+  <script>
+    // ========== Bubble Animation ==========
+    const canvas = document.getElementById('bubble-canvas');
+    const ctx = canvas.getContext('2d');
+    let bubbles = [];
+    let mouse = { x: null, y: null };
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    class Bubble {
+      constructor() { this.reset(true); }
+      reset(initial = false) {
+        this.x = Math.random() * canvas.width;
+        this.y = initial ? Math.random() * canvas.height : canvas.height + 50;
+        this.size = Math.random() * 40 + 10;
+        this.speedY = Math.random() * 0.8 + 0.3;
+        this.speedX = (Math.random() - 0.5) * 0.6;
+        this.opacity = Math.random() * 0.35 + 0.08;
+        this.hue = 260 + Math.random() * 40;
+      }
+      update() {
+        this.y -= this.speedY;
+        this.x += this.speedX;
+        if (mouse.x !== null) {
+          const dx = this.x - mouse.x;
+          const dy = this.y - mouse.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 120) {
+            this.x += dx * 0.01;
+            this.y += dy * 0.01;
+          }
+        }
+        if (this.y < -this.size || this.x < -50 || this.x > canvas.width + 50) {
+          this.reset();
+        }
+      }
+      draw() {
+        ctx.beginPath();
+        const gradient = ctx.createRadialGradient(
+          this.x - this.size * 0.3, this.y - this.size * 0.3, 0,
+          this.x, this.y, this.size
+        );
+        gradient.addColorStop(0, `hsla(${this.hue}, 80%, 70%, ${this.opacity * 1.5})`);
+        gradient.addColorStop(0.6, `hsla(${this.hue}, 70%, 50%, ${this.opacity})`);
+        gradient.addColorStop(1, `hsla(${this.hue}, 60%, 30%, 0)`);
+        ctx.fillStyle = gradient;
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    function initBubbles() {
+      bubbles = [];
+      const count = Math.min(Math.floor((canvas.width * canvas.height) / 18000), 45);
+      for (let i = 0; i < count; i++) bubbles.push(new Bubble());
+    }
+    initBubbles();
+    window.addEventListener('resize', initBubbles);
+
+    function animateBubbles() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      bubbles.forEach(b => { b.update(); b.draw(); });
+      requestAnimationFrame(animateBubbles);
+    }
+    animateBubbles();
+
+    document.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
+    document.addEventListener('mouseleave', () => { mouse.x = null; mouse.y = null; });
+
+    // ========== Ripple ==========
+    function createRipple(e, el) {
+      const rect = el.getBoundingClientRect();
+      const size = Math.max(rect.width, rect.height);
+      const ripple = document.createElement('span');
+      ripple.className = 'ripple';
+      ripple.style.width = ripple.style.height = size + 'px';
+      ripple.style.left = (e.clientX - rect.left - size / 2) + 'px';
+      ripple.style.top = (e.clientY - rect.top - size / 2) + 'px';
+      el.appendChild(ripple);
+      setTimeout(() => ripple.remove(), 600);
+    }
+
+    // ========== Storage Keys ==========
+    const STORAGE = {
+      primaryCards: 'haj_ashkan_primary_cards',
+      secondaryCards: 'haj_ashkan_secondary_cards',
+      blueUsername: 'haj_ashkan_blue_username',
+      bluePassword: 'haj_ashkan_blue_password',
+      nextId: 'haj_ashkan_next_id'
+    };
+
+    // ========== State ==========
+    // primaryCards = لیست اصلی در پروفایل (منبع حقیقت)
+    // secondaryCards = لیست فرعی در صفحه اصلی (قابل ویرایش مستقل)
+    let primaryCards = [];
+    let secondaryCards = [];
+    let nextId = 1;
+    let editingPrimaryId = null;
+    let editingSecondaryId = null;
+
+    // snapshot برای تشخیص تغییرات ذخیره نشده در پروفایل
+    let savedSnapshot = null;
+
+    function takeSnapshot() {
+      return JSON.stringify({
+        cards: primaryCards,
+        username: document.getElementById('blue-username').value.trim(),
+        password: document.getElementById('blue-password').value
+      });
+    }
+
+    function hasUnsavedChanges() {
+      if (savedSnapshot === null) return false;
+      return takeSnapshot() !== savedSnapshot;
+    }
+
+    function refreshSnapshot() {
+      savedSnapshot = takeSnapshot();
+    }
+
+    // ========== Helpers ==========
+    function formatCardNumber(value) {
+      const digits = value.replace(/\D/g, '').slice(0, 16);
+      if (digits.length === 0) return '';
+      return digits.replace(/(\d{4})(?=\d)/g, '$1-');
+    }
+
+    function formatAmount(value) {
+      const digits = value.replace(/\D/g, '');
+      return digits.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    }
+
+    function toPersianDigits(n) {
+      return String(n).replace(/\d/g, d => '۰۱۲۳۴۵۶۷۸۹'[d]);
+    }
+
+    function showToast(text, icon = '✓') {
+      const toast = document.getElementById('toast');
+      document.getElementById('toast-text').textContent = text;
+      document.getElementById('toast-icon').textContent = icon;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2800);
+    }
+
+    function avatarSVG() {
+      return `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v1.2h19.2v-1.2c0-3.2-6.4-4.8-9.6-4.8z"/></svg>`;
+    }
+
+    function deepClone(arr) {
+      return JSON.parse(JSON.stringify(arr));
+    }
+
+    // ========== Load / Save ==========
+    function loadData() {
+      try {
+        const p = localStorage.getItem(STORAGE.primaryCards);
+        primaryCards = p ? JSON.parse(p) : [];
+        const s = localStorage.getItem(STORAGE.secondaryCards);
+        secondaryCards = s ? JSON.parse(s) : [];
+        nextId = parseInt(localStorage.getItem(STORAGE.nextId) || '1', 10);
+
+        const u = localStorage.getItem(STORAGE.blueUsername) || '';
+        const pw = localStorage.getItem(STORAGE.bluePassword) || '';
+        document.getElementById('blue-username').value = u;
+        document.getElementById('blue-password').value = pw;
+        updateCredentialHints(u, pw);
+      } catch (e) {
+        primaryCards = [];
+        secondaryCards = [];
+        nextId = 1;
+      }
+    }
+
+    function savePrimary() {
+      localStorage.setItem(STORAGE.primaryCards, JSON.stringify(primaryCards));
+      localStorage.setItem(STORAGE.nextId, String(nextId));
+    }
+
+    function saveSecondary() {
+      localStorage.setItem(STORAGE.secondaryCards, JSON.stringify(secondaryCards));
+      localStorage.setItem(STORAGE.nextId, String(nextId));
+    }
+
+    function saveCredentials() {
+      const u = document.getElementById('blue-username').value.trim();
+      const pw = document.getElementById('blue-password').value;
+      localStorage.setItem(STORAGE.blueUsername, u);
+      localStorage.setItem(STORAGE.bluePassword, pw);
+      updateCredentialHints(u, pw);
+    }
+
+    function updateCredentialHints(u, pw) {
+      const uh = document.getElementById('username-current');
+      const ph = document.getElementById('password-current');
+      if (u) {
+        uh.innerHTML = `یوزرنیم فعلی: <span class="current-value">${u}</span>`;
+      } else {
+        uh.textContent = 'هنوز یوزرنیمی ذخیره نشده';
+      }
+      if (pw) {
+        ph.innerHTML = `پسورد فعلی: <span class="current-value">${pw}</span>`;
+      } else {
+        ph.textContent = 'هنوز پسوردی ذخیره نشده';
+      }
+    }
+
+    // ========== Navigation ==========
+    function showPage(pageId) {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.getElementById(pageId).classList.add('active');
+      if (pageId === 'page-main') renderSecondaryCards();
+      if (pageId === 'page-profile') {
+        renderPrimaryCards();
+        refreshSnapshot();
+      }
+    }
+
+    function leaveProfileToMain(discard) {
+      if (discard) {
+        // بازگردانی به آخرین وضعیت ذخیره شده
+        loadData();
+        editingPrimaryId = null;
+      }
+      showPage('page-main');
+    }
+
+    document.getElementById('go-profile-btn').addEventListener('click', function(e) {
+      createRipple(e, this);
+      showPage('page-profile');
+    });
+    document.getElementById('go-main-btn').addEventListener('click', function(e) {
+      createRipple(e, this);
+      if (hasUnsavedChanges()) {
+        document.getElementById('unsaved-modal').classList.add('show');
+      } else {
+        showPage('page-main');
+      }
+    });
+
+    // Unsaved modal actions
+    document.getElementById('unsaved-save').addEventListener('click', function(e) {
+      createRipple(e, this);
+      document.getElementById('unsaved-modal').classList.remove('show');
+      // تأیید نهایی ذخیره
+      document.getElementById('confirm-save-modal').classList.add('show');
+      // بعد از تأیید ذخیره، به صفحه اصلی می‌رود
+      window._afterConfirmSaveGoMain = true;
+    });
+    document.getElementById('unsaved-discard').addEventListener('click', function(e) {
+      createRipple(e, this);
+      document.getElementById('unsaved-modal').classList.remove('show');
+      leaveProfileToMain(true);
+      showToast('تغییرات ذخیره نشد — اطلاعات قبلی باقی ماند', '⚠️');
+    });
+    document.getElementById('unsaved-cancel').addEventListener('click', function(e) {
+      createRipple(e, this);
+      document.getElementById('unsaved-modal').classList.remove('show');
+    });
+    document.getElementById('unsaved-modal').addEventListener('click', function(e) {
+      if (e.target === this) this.classList.remove('show');
+    });
+
+    // ========== Render Helpers ==========
+    function renderCardList(containerId, cards, editingId, prefix) {
+      const list = document.getElementById(containerId);
+      list.innerHTML = '';
+
+      if (cards.length === 0) {
+        list.innerHTML = `
+          <div class="empty-state">
+            <span>📭</span>
+            هنوز کارتی اضافه نشده<br>
+            با دکمه بالا کارت جدید اضافه کنید
+          </div>`;
+        return;
+      }
+
+      cards.forEach((card, index) => {
+        const isEditing = editingId === card.id;
+        const cardIndex = index + 1;
+        const item = document.createElement('div');
+        item.className = 'card-item' + (isEditing ? ' editing' : '');
+        item.dataset.id = card.id;
+
+        if (isEditing) {
+          item.innerHTML = `
+            <div class="card-avatar">${avatarSVG()}</div>
+            <div class="edit-fields">
+              <input type="text" class="card-edit-input" value="${card.number === 'XXXX-XXXX-XXXX-XXXX' ? '' : card.number}" id="edit-input-${prefix}-${card.id}" maxlength="19" placeholder="XXXX-XXXX-XXXX-XXXX">
+              <input type="text" class="card-edit-owner" value="${card.owner}" id="edit-owner-${prefix}-${card.id}" placeholder="مالک حساب">
+              <div class="card-index-label"><span class="card-index-badge">کارت ${toPersianDigits(cardIndex)}</span></div>
+            </div>
+            <div class="edit-actions">
+              <button class="btn btn-success" data-action="save" data-id="${card.id}" data-prefix="${prefix}">ذخیره</button>
+              <button class="btn btn-secondary" data-action="cancel" data-id="${card.id}" data-prefix="${prefix}">لغو</button>
+            </div>
+          `;
+        } else {
+          item.innerHTML = `
+            <div class="card-avatar">${avatarSVG()}</div>
+            <div class="card-info">
+              <div class="card-number">${card.number}</div>
+              <div class="card-owner">${card.owner} · کارت ${toPersianDigits(cardIndex)}</div>
+            </div>
+            <div class="card-actions">
+              <button class="btn btn-danger" data-action="delete" data-id="${card.id}" data-prefix="${prefix}">حذف 🗑</button>
+              <button class="btn btn-edit" data-action="edit" data-id="${card.id}" data-prefix="${prefix}">ویرایش ✎</button>
+            </div>
+          `;
+        }
+        list.appendChild(item);
+      });
+
+      list.querySelectorAll('.btn').forEach(btn => {
+        btn.addEventListener('click', function(e) { createRipple(e, this); });
+      });
+
+      // format card number on input
+      list.querySelectorAll('.card-edit-input').forEach(inp => {
+        inp.addEventListener('input', function() {
+          this.value = formatCardNumber(this.value);
+        });
+      });
+    }
+
+    function renderPrimaryCards() {
+      document.getElementById('profile-card-count').textContent = toPersianDigits(primaryCards.length) + ' کارت';
+      renderCardList('profile-card-list', primaryCards, editingPrimaryId, 'primary');
+    }
+
+    function renderSecondaryCards() {
+      document.getElementById('main-card-count').textContent = toPersianDigits(secondaryCards.length) + ' کارت';
+      const hint = document.getElementById('amount-hint');
+      if (secondaryCards.length > 0) {
+        hint.textContent = `همین مبلغ به همهٔ ${toPersianDigits(secondaryCards.length)} حساب واریز می‌شود`;
+      } else {
+        hint.textContent = 'ابتدا از پروفایل لیست اصلی را ذخیره کنید یا اینجا کارت اضافه کنید';
+      }
+      renderCardList('main-card-list', secondaryCards, editingSecondaryId, 'secondary');
+    }
+
+    // ========== Card Actions (delegated) ==========
+    function handleCardAction(e, isPrimary) {
+      const btn = e.target.closest('[data-action]');
+      if (!btn) return;
+      const action = btn.dataset.action;
+      const id = parseInt(btn.dataset.id, 10);
+      const prefix = btn.dataset.prefix;
+
+      const cards = isPrimary ? primaryCards : secondaryCards;
+      let editingId = isPrimary ? editingPrimaryId : editingSecondaryId;
+
+      if (action === 'edit') {
+        if (isPrimary) editingPrimaryId = id;
+        else editingSecondaryId = id;
+        isPrimary ? renderPrimaryCards() : renderSecondaryCards();
+        setTimeout(() => {
+          const input = document.getElementById(`edit-input-${prefix}-${id}`);
+          if (input) input.focus();
+        }, 50);
+      } else if (action === 'save') {
+        const input = document.getElementById(`edit-input-${prefix}-${id}`);
+        const ownerInput = document.getElementById(`edit-owner-${prefix}-${id}`);
+        let newNumber = formatCardNumber(input.value);
+        if (!newNumber || newNumber.replace(/-/g, '').length < 16) {
+          if (input.value.trim() === '' || input.value.includes('X')) {
+            newNumber = 'XXXX-XXXX-XXXX-XXXX';
+          } else {
+            showToast('شماره کارت باید ۱۶ رقم باشد', '⚠️');
+            return;
+          }
+        }
+        const card = cards.find(c => c.id === id);
+        if (card) {
+          card.number = newNumber;
+          card.owner = ownerInput.value.trim() || 'مالک حساب';
+          if (isPrimary) {
+            editingPrimaryId = null;
+            // فقط در حافظه — ذخیره نهایی با دکمه ذخیره پروفایل
+            renderPrimaryCards();
+            showToast('کارت در لیست اصلی به‌روز شد (هنوز ذخیره نهایی نشده)', '✎');
+          } else {
+            editingSecondaryId = null;
+            saveSecondary();
+            renderSecondaryCards();
+            showToast('کارت به‌روز شد');
+          }
+        }
+      } else if (action === 'cancel') {
+        if (isPrimary) {
+          editingPrimaryId = null;
+          renderPrimaryCards();
+        } else {
+          editingSecondaryId = null;
+          renderSecondaryCards();
+        }
+      } else if (action === 'delete') {
+        if (isPrimary) {
+          primaryCards = primaryCards.filter(c => c.id !== id);
+          if (editingPrimaryId === id) editingPrimaryId = null;
+          // فقط در حافظه — ذخیره نهایی با دکمه ذخیره پروفایل
+          renderPrimaryCards();
+          showToast('کارت از لیست اصلی حذف شد (هنوز ذخیره نهایی نشده)', '🗑');
+        } else {
+          secondaryCards = secondaryCards.filter(c => c.id !== id);
+          if (editingSecondaryId === id) editingSecondaryId = null;
+          saveSecondary();
+          renderSecondaryCards();
+          showToast('کارت از لیست فرعی حذف شد', '🗑');
+        }
+      }
+    }
+
+    document.getElementById('profile-card-list').addEventListener('click', e => handleCardAction(e, true));
+    document.getElementById('main-card-list').addEventListener('click', e => handleCardAction(e, false));
+
+    // ========== Add Card ==========
+    document.getElementById('profile-add-card-btn').addEventListener('click', function(e) {
+      createRipple(e, this);
+      primaryCards.push({
+        id: nextId++,
+        number: 'XXXX-XXXX-XXXX-XXXX',
+        owner: 'مالک حساب'
+      });
+      // فقط در حافظه — ذخیره نهایی با دکمه ذخیره پروفایل
+      renderPrimaryCards();
+      const wrapper = document.querySelector('#page-profile .card-list-wrapper');
+      setTimeout(() => { if (wrapper) wrapper.scrollTop = wrapper.scrollHeight; }, 50);
+      showToast('کارت اضافه شد (هنوز ذخیره نهایی نشده)', '➕');
+    });
+
+    document.getElementById('main-add-card-btn').addEventListener('click', function(e) {
+      createRipple(e, this);
+      secondaryCards.push({
+        id: nextId++,
+        number: 'XXXX-XXXX-XXXX-XXXX',
+        owner: 'مالک حساب'
+      });
+      saveSecondary();
+      renderSecondaryCards();
+      const wrapper = document.querySelector('#page-main .card-list-wrapper');
+      setTimeout(() => { if (wrapper) wrapper.scrollTop = wrapper.scrollHeight; }, 50);
+      showToast('کارت به لیست فرعی اضافه شد (روی لیست اصلی تأثیر ندارد)', '➕');
+    });
+
+    document.getElementById('main-refresh-btn').addEventListener('click', function(e) {
+      // خواندن مجدد لیست اصلی از localStorage (آخرین نسخه ذخیره شده)
+      try {
+        const p = localStorage.getItem(STORAGE.primaryCards);
+        const primary = p ? JSON.parse(p) : [];
+        if (primary.length === 0) {
+          showToast('لیست اصلی خالی است — ابتدا در پروفایل ذخیره کنید', '⚠️');
+          return;
+        }
+        secondaryCards = deepClone(primary);
+        secondaryCards.forEach(c => { c.id = nextId++; });
+        saveSecondary();
+        editingSecondaryId = null;
+        renderSecondaryCards();
+        showToast('لیست فرعی از لیست اصلی به‌روز شد', '🔄');
+      } catch (err) {
+        showToast('خطا در بارگذاری لیست اصلی', '⚠️');
+      }
+    });
+
+    // ========== Save Settings (همگام‌سازی) ==========
+    function isPlaceholderCard(number) {
+      if (!number) return true;
+      const cleaned = String(number).replace(/[-\s]/g, '').toUpperCase();
+      // شماره خام/placeholder یا کمتر از ۱۶ رقم واقعی
+      if (cleaned.includes('X')) return true;
+      if (!/^\d{16}$/.test(cleaned)) return true;
+      return false;
+    }
+
+    function findInvalidCards(cards) {
+      return cards.filter(c => isPlaceholderCard(c.number));
+    }
+
+    function applySaveAndSync() {
+      saveCredentials();
+      savePrimary();
+      // همگام‌سازی: لیست فرعی را از لیست اصلی کپی کن
+      secondaryCards = deepClone(primaryCards);
+      // آی‌دی‌های جدید برای جلوگیری از تداخل در ویرایش مستقل
+      secondaryCards.forEach(c => {
+        c.id = nextId++;
+      });
+      saveSecondary();
+      refreshSnapshot();
+      showToast('اطلاعات ذخیره و با صفحه اصلی همگام شد', '💾');
+      const goMain = window._afterConfirmSaveGoMain;
+      window._afterConfirmSaveGoMain = false;
+      if (goMain) {
+        setTimeout(() => showPage('page-main'), 400);
+      } else {
+        setTimeout(() => showPage('page-main'), 600);
+      }
+    }
+
+    document.getElementById('save-settings-btn').addEventListener('click', function(e) {
+      createRipple(e, this);
+      // اعتبارسنجی شماره کارت‌های لیست اصلی
+      if (primaryCards.length === 0) {
+        showToast('حداقل یک کارت در لیست اصلی لازم است', '⚠️');
+        return;
+      }
+      const invalid = findInvalidCards(primaryCards);
+      if (invalid.length > 0) {
+        showToast('شماره کارت نباید خام باشد — همه کارت‌ها باید ۱۶ رقم واقعی داشته باشند', '⚠️');
+        return;
+      }
+      window._afterConfirmSaveGoMain = true;
+      document.getElementById('confirm-save-modal').classList.add('show');
+    });
+
+    document.getElementById('confirm-save-yes').addEventListener('click', function(e) {
+      createRipple(e, this);
+      document.getElementById('confirm-save-modal').classList.remove('show');
+      applySaveAndSync();
+    });
+    document.getElementById('confirm-save-no').addEventListener('click', function(e) {
+      createRipple(e, this);
+      document.getElementById('confirm-save-modal').classList.remove('show');
+      window._afterConfirmSaveGoMain = false;
+    });
+    document.getElementById('confirm-save-modal').addEventListener('click', function(e) {
+      if (e.target === this) {
+        this.classList.remove('show');
+        window._afterConfirmSaveGoMain = false;
+      }
+    });
+
+    // ========== Amount ==========
+    const amountInput = document.getElementById('amount');
+    amountInput.addEventListener('input', function() {
+      this.value = formatAmount(this.value);
+    });
+
+    // ========== Transfer ==========
+    document.getElementById('transfer-btn').addEventListener('click', function(e) {
+      createRipple(e, this);
+
+      if (secondaryCards.length === 0) {
+        showToast('حداقل یک کارت در لیست فرعی لازم است', '⚠️');
+        return;
+      }
+
+      const invalid = findInvalidCards(secondaryCards);
+      if (invalid.length > 0) {
+        showToast('شماره کارت نباید خام باشد (XXXX) — همه کارت‌ها باید شماره واقعی ۱۶ رقمی داشته باشند', '⚠️');
+        return;
+      }
+
+      const amount = amountInput.value.replace(/,/g, '');
+      if (!amount || parseInt(amount, 10) <= 0) {
+        showToast('مبلغ معتبر (به ریال) وارد کنید', '⚠️');
+        return;
+      }
+
+      const formattedAmount = formatAmount(amount);
+      document.getElementById('modal-message').textContent =
+        `مبلغ ${toPersianDigits(formattedAmount)} ریال به ${toPersianDigits(secondaryCards.length)} حساب با موفقیت منتقل شد.`;
+
+      document.getElementById('success-modal').classList.add('show');
+      setTimeout(() => { amountInput.value = ''; }, 400);
+    });
+
+    document.getElementById('close-modal').addEventListener('click', function(e) {
+      createRipple(e, this);
+      document.getElementById('success-modal').classList.remove('show');
+    });
+    document.getElementById('success-modal').addEventListener('click', function(e) {
+      if (e.target === this) this.classList.remove('show');
+    });
+
+    // ========== Init ==========
+    loadData();
+    // اگر لیست فرعی خالی است و لیست اصلی چیزی دارد، یک‌بار همگام کن
+    if (secondaryCards.length === 0 && primaryCards.length > 0) {
+      secondaryCards = deepClone(primaryCards);
+      secondaryCards.forEach(c => { c.id = nextId++; });
+      saveSecondary();
+    }
+    renderSecondaryCards();
+    refreshSnapshot();
+    // صفحه اصلی به‌صورت پیش‌فرض نمایش داده می‌شود
+    // برای شروع از پروفایل: showPage('page-profile');
+  </script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+2026/10/04-17:58:41.106 5 Reusing MANIFEST /home/ashkan/Desktop/blu/code/chrome-profile/Default/Local Storage/leveldb/MANIFEST-000001
+2026/10/04-17:58:41.109 5 Recovering log #35
+2026/10/04-17:58:41.112 5 Reusing old log /home/ashkan/Desktop/blu/code/chrome-profile/Default/Local Storage/leveldb/000035.log 
+2026/10/04-17:59:09.990 5 Level-0 table #39: started
+2026/10/04-17:59:09.995 5 Level-0 table #39: 49926 bytes OK
+2026/10/04-17:59:09.999 5 Delete type=0 #35

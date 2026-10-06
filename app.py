@@ -1,27 +1,3 @@
-# -*- coding: utf-8 -*-
-"""سرور Flask پروژه‌ی کارت‌به‌کارت بلو.
-
-- صفحه‌ی templates/index.html را سرو می‌کند.
-- لیست اصلی + یوزر/پسورد را در database/blu.db (از طریق code/db.py) نگه می‌دارد.
-- code/blu_cart_be_cart.py را در یک thread پس‌زمینه اجرا می‌کند (مرورگر بدون پنجره)،
-  وضعیت لحظه‌ای را به صفحه می‌دهد و اگر بلو کد تأیید (OTP) خواست، از کاربر داخل سایت می‌گیرد.
-
-اجرا:  python app.py   ->   http://127.0.0.1:5000
-
-API دیتابیس:
-  GET  /api/state                  لیست اصلی + یوزر/پسورد
-  POST /api/primary                ذخیره‌ی لیست اصلی (ویرایش/افزودن/حذف)
-  POST /api/setting                ذخیره‌ی username / password / nextId
-
-API انتقال:
-  POST /api/transfer               {amount, cards:[{id, number, owner}]}  ->  {job_id, status, total}
-  GET  /api/transfer/status/<id>   وضعیت کار (برای polling)
-  GET  /api/transfer/active        کاری که هنوز در جریان است (برای وصل شدن بعد از رفرش)
-  POST /api/transfer/otp           {job_id, otp}  ->  وضعیت کار
-
-وضعیت کل کار (status): pending | running | need_otp | completed | failed
-وضعیت هر کارت:        pending | processing | success | failed | skipped
-"""
 import os
 import re
 import sys
@@ -55,6 +31,8 @@ except Exception:  # pragma: no cover
 
 OTP_TIMEOUT = 180  # ثانیه: مهلت وارد کردن OTP توسط کاربر
 KEEP_JOBS = 20     # تعداد کارهای تمام‌شده‌ای که در حافظه می‌مانند
+MIN_AMOUNT = 1_000             # ریال (۱۰۰ تومان): حداقل مبلغ هر انتقال
+MAX_AMOUNT = 30_000_000_000    # ریال (۳ میلیارد تومان): حداکثر مبلغ هر انتقال
 
 app = Flask(__name__, static_folder=os.path.join(BASE_DIR, "static"), static_url_path="/static")
 app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0
@@ -90,7 +68,32 @@ def index():
 
 @app.get("/api/state")
 def api_state():
-    return jsonify(db.get_state())
+    state = db.get_state()
+    # وضعیت آخرین اجرا (فقط در حافظهٔ سرور؛ با هر بار اجرای app.py خالی شروع می‌شود)
+    with JOBS_LOCK:
+        state["lastRun"] = {k: dict(v) for k, v in LAST_RUN.items()}
+    return jsonify(state)
+
+
+@app.get("/api/history")
+def api_history():
+    limit = request.args.get("limit", 1000, type=int) or 1000
+    return jsonify(items=db.get_history(max(1, min(limit, 5000))))
+
+
+@app.post("/api/history/delete")
+def api_history_delete():
+    data = request.get_json(silent=True) or {}
+    try:
+        item_id = int(data.get("id"))
+    except (TypeError, ValueError):
+        return jsonify(error="شناسهٔ سابقه نامعتبر است"), 400
+    return jsonify(ok=True, deleted=db.delete_history(item_id))
+
+
+@app.post("/api/history/clear")
+def api_history_clear():
+    return jsonify(ok=True, deleted=db.clear_history())
 
 
 @app.post("/api/primary")
@@ -109,7 +112,7 @@ def api_primary():
 def api_setting():
     data = request.get_json(silent=True) or {}
     key = data.get("key")
-    if key not in ("username", "password", "nextId"):
+    if key not in ("username", "password", "nextId", "show_browser"):
         return jsonify(error="کلید نامعتبر"), 400
     db.set_setting(key, data.get("value", ""))
     return jsonify(ok=True)
@@ -119,6 +122,10 @@ def api_setting():
 JOBS = {}                 # job_id -> job
 JOBS_LOCK = threading.RLock()
 ACTIVE = {"job_id": None}  # فقط یک کار هم‌زمان (پروفایل کروم قفل می‌شود)
+
+# آخرین وضعیت هر کارت (کلید: شماره ۱۶ رقمی) برای نمایش در ردیف لیست فرعی.
+# عمداً فقط در حافظه است: با شروع برنامه خالی است و تکلیف هیچ کارتی مشخص نیست.
+LAST_RUN = {}
 
 _PERSIAN = "۰۱۲۳۴۵۶۷۸۹"
 _ARABIC = "٠١٢٣٤٥٦٧٨٩"
@@ -148,6 +155,15 @@ def friendly_error(e: Exception) -> str:
         if isinstance(e, blu.InsufficientBalance):
             return (f"موجودی حساب کافی نیست (موجودی: {e.balance:,} ریال، "
                     f"حداقل لازم: {e.needed:,} ریال)")
+        if isinstance(e, blu.AmountLimitExceeded):
+            return "مبلغ از سقف مجاز انتقال بیشتر است؛ عملیات متوقف شد"
+        if isinstance(e, blu.InvalidInfo):
+            return "بلو اعلام کرد اطلاعات وارد شده نادرست است (یوزرنیم یا پسورد را در پروفایل بررسی کنید)؛ عملیات متوقف شد"
+        if isinstance(e, blu.UnknownBluError):
+            return "بلو در ورود «خطای ناشناخته» داد و بعد از ۳ بار ری‌استارت مرورگر هم برطرف نشد؛ عملیات متوقف شد"
+        if isinstance(e, blu.BalanceUnreadable):
+            return ("موجودی حساب از صفحهٔ بلو خوانده نشد؛ برای احتیاط هیچ واریزی برای این کارت انجام نشد "
+                    "(ممکن است ظاهر صفحهٔ بلو تغییر کرده باشد)؛ عملیات متوقف شد")
         if isinstance(e, blu.OtpTimeout):
             return "زمان وارد کردن کد تأیید (OTP) تمام شد؛ دوباره تلاش کنید"
     if TimeoutException is not None and isinstance(e, TimeoutException):
@@ -167,6 +183,8 @@ def job_payload(job: dict) -> dict:
         "status": job["status"],
         "need_otp": job["need_otp"],
         "otp_message": job["otp_message"],
+        "otp_wrong": job.get("otp_retry", False),
+        "notice": job.get("notice"),
         "current_index": job["current_index"],
         "current_card": job["current_card"],
         "results": [dict(r) for r in job["results"]],
@@ -188,8 +206,29 @@ def _cleanup_jobs():
         JOBS.pop(j["job_id"], None)
 
 
-def run_job(job_id: str, username: str, password: str, amount: int):
+def record_result(item: dict, status: str, message: str = "", interrupted: bool = False):
+    """وضعیت آخرین اجرای کارت را نگه می‌دارد و نتیجهٔ موفق/ناموفق را در سوابق (دیتابیس) می‌نویسد.
+    (با JOBS_LOCK صدا زده شود.)"""
+    LAST_RUN[only_digits(item["number"])] = {
+        "status": status,
+        "message": message,
+        "amount": item.get("amount") or 0,
+        "interrupted": interrupted,
+    }
+    if status in ("success", "failed"):
+        try:
+            db.add_history(status, item["number"], item["owner"], item.get("amount") or 0, message)
+        except Exception:
+            app.logger.error("could not write history:\n%s", traceback.format_exc())
+
+
+def run_job(job_id: str, username: str, password: str, amount: int, headless=None):
     job = JOBS[job_id]
+
+    def set_notice(kind, text):
+        # با قفل صدا زده می‌شود؛ seq باعث می‌شود صفحه هر پیام را فقط یک بار نشان دهد
+        job["notice_seq"] += 1
+        job["notice"] = {"seq": job["notice_seq"], "kind": kind, "text": text}
 
     def on_progress(event, index, detail=""):
         with JOBS_LOCK:
@@ -201,10 +240,24 @@ def run_job(job_id: str, username: str, password: str, amount: int):
                 job["current_card"] = item["number"]
             elif event == "step":
                 item["message"] = detail
+            elif event == "otp_wrong":
+                job["otp_retry"] = True
+                set_notice("otp_wrong", "کد تأیید اشتباه بود! سشن از اول ری‌استارت می‌شود؛ منتظر کد جدید بلو باش و آن را دوباره وارد کن")
+                item["message"] = "کد تأیید اشتباه بود — ری‌استارت سشن"
+            elif event == "otp_ok":
+                job["otp_retry"] = False
+                set_notice("otp_ok", "کد تأیید درست بود ✓")
+            elif event == "card_failed":
+                # فقط این کارت ناموفق است؛ کار ادامه پیدا می‌کند
+                item["status"] = "failed"
+                item["message"] = detail or "انتقال ناموفق بود"
+                job["fail_count"] += 1
+                record_result(item, "failed", item["message"])
             elif event == "card_done":
                 item["status"] = "success"
                 item["message"] = f"انتقال انجام شد — {detail}" if detail else "انتقال با موفقیت انجام شد"
                 job["success_count"] += 1
+                record_result(item, "success", detail or "انتقال با موفقیت انجام شد")
 
     def get_otp() -> str:
         # بلو کد خواسته؛ وضعیت را need_otp می‌کنیم تا صفحه مودال OTP را نشان بدهد
@@ -213,7 +266,11 @@ def run_job(job_id: str, username: str, password: str, amount: int):
             job["otp_event"].clear()
             job["status"] = "need_otp"
             job["need_otp"] = True
-            job["otp_message"] = "کد تأیید (OTP) ارسال‌شده از طرف بلو را وارد کنید"
+            job["otp_message"] = (
+                "کد قبلی اشتباه بود و سشن از اول ری‌استارت شد؛ کد جدید ارسال‌شده از طرف بلو را وارد کنید"
+                if job.get("otp_retry")
+                else "کد تأیید (OTP) ارسال‌شده از طرف بلو را وارد کنید"
+            )
         got = job["otp_event"].wait(OTP_TIMEOUT)
         with JOBS_LOCK:
             value = job["otp_value"]
@@ -229,9 +286,11 @@ def run_job(job_id: str, username: str, password: str, amount: int):
         with JOBS_LOCK:
             job["status"] = "running"
             data = db.cards_to_run_data(
-                [{"number": r["number"], "owner": r["owner"]} for r in job["results"]]
+                [{"number": r["number"], "owner": r["owner"], "amount": r["amount"]}
+                 for r in job["results"]]
             )
-        blu.run(data, username, password, amount, get_otp=get_otp, on_progress=on_progress)
+        blu.run(data, username, password, amount, get_otp=get_otp,
+                on_progress=on_progress, headless=headless)
         with JOBS_LOCK:
             job["status"] = "completed"
             job["current_card"] = None
@@ -242,12 +301,16 @@ def run_job(job_id: str, username: str, password: str, amount: int):
         with JOBS_LOCK:
             for item in job["results"]:
                 if item["status"] == "processing":
+                    # کارتی که وسط خطا در حال انتقال بود؛ برای ادامه‌ی بعدی علامت می‌خورد
                     item["status"] = "failed"
                     item["message"] = message
+                    item["interrupted"] = True
                     job["fail_count"] += 1
+                    record_result(item, "failed", message, interrupted=True)
                 elif item["status"] == "pending":
                     item["status"] = "skipped"
                     item["message"] = "اجرا متوقف شد"
+                    record_result(item, "skipped", item["message"])
             job["status"] = "failed"
             job["error"] = message
             job["need_otp"] = False
@@ -269,26 +332,32 @@ def api_start_transfer():
     if blu is None:
         return jsonify(error=f"ماژول انتقال بارگذاری نشد ({type(BLU_IMPORT_ERROR).__name__}: "
                              f"{first_line(BLU_IMPORT_ERROR)}). احتمالاً باید «pip install selenium» بزنید."), 500
-    if not os.path.isfile(blu.CHROMEDRIVER_PATH):
-        return jsonify(error=f"فایل chromedriver در مسیر {blu.CHROMEDRIVER_PATH} پیدا نشد"), 500
 
     cards = data.get("cards")
     if not isinstance(cards, list) or not cards:
         return jsonify(error="لیست کارت‌ها خالی است"), 400
 
+    # مبلغ پیش‌فرض (اختیاری اگر همهٔ کارت‌ها مبلغ اختصاصی داشته باشند)
     amount_text = only_digits(data.get("amount"))
-    if not amount_text or int(amount_text) <= 0:
-        return jsonify(error="مبلغ نامعتبر است"), 400
-    amount = int(amount_text)
+    amount = int(amount_text) if amount_text else 0
 
     results = []
     for i, c in enumerate(cards):
         if not isinstance(c, dict) or not db.is_real_card(c.get("number", "")):
             return jsonify(error=f"شماره کارت ردیف {i + 1} معتبر نیست (باید ۱۶ رقم باشد)"), 400
+        card_amount_text = only_digits(c.get("amount"))
+        card_amount = int(card_amount_text) if card_amount_text else amount
+        if card_amount <= 0:
+            return jsonify(error=f"مبلغ کارت ردیف {i + 1} نامعتبر است"), 400
+        if card_amount < MIN_AMOUNT:
+            return jsonify(error=f"مبلغ کارت ردیف {i + 1}: حداقل مبلغ انتقال ۱۰۰ تومان (۱,۰۰۰ ریال) است"), 400
+        if card_amount > MAX_AMOUNT:
+            return jsonify(error=f"مبلغ کارت ردیف {i + 1}: حداکثر مبلغ انتقال ۳ میلیارد تومان است"), 400
         results.append({
             "id": c.get("id"),
             "number": format_card(c.get("number", "")),
             "owner": c.get("owner") or db.PLACEHOLDER_OWNER,
+            "amount": card_amount,
             "status": "pending",
             "message": "",
         })
@@ -313,6 +382,9 @@ def api_start_transfer():
             "otp_message": "",
             "otp_event": threading.Event(),
             "otp_value": None,
+            "otp_retry": False,   # کد قبلی اشتباه بود و سشن ری‌استارت شده
+            "notice": None,       # پیام لحظه‌ای برای نمایش در سایت: {seq, kind, text}
+            "notice_seq": 0,
             "current_index": 0,
             "current_card": None,
             "results": results,
@@ -324,9 +396,16 @@ def api_start_transfer():
             "finished_at": None,
         }
         ACTIVE["job_id"] = job_id
+        # اجرای تازه، وضعیت قبلیِ همین کارت‌ها را کنار می‌گذارد
+        for r in results:
+            LAST_RUN.pop(only_digits(r["number"]), None)
+
+    # تنظیم پروفایل «نمایش مرورگر»؛ اگر هیچ‌وقت تنظیم نشده، همان پیش‌فرض فایل بلو (BLU_HEADLESS)
+    show_setting = db.get_setting("show_browser", "")
+    headless = None if show_setting == "" else (show_setting != "1")
 
     threading.Thread(
-        target=run_job, args=(job_id, username, password, amount), daemon=True
+        target=run_job, args=(job_id, username, password, amount, headless), daemon=True
     ).start()
 
     return jsonify({"job_id": job_id, "status": "pending", "total": len(results)})

@@ -931,6 +931,147 @@
       color: #fcd34d;
     }
 
+
+    /* اعلان‌های لحظه‌ای صفحه‌ی انتقال (درست/اشتباه بودن OTP) */
+    .transfer-notice {
+      display: none;
+      align-items: center;
+      gap: 0.7rem;
+      padding: 0.8rem 1rem;
+      margin-bottom: 0.85rem;
+      border-radius: 14px;
+      font-size: 0.88rem;
+      line-height: 1.7;
+      text-align: right;
+      flex-shrink: 0;
+      animation: noticeIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .transfer-notice.show { display: flex; }
+    .transfer-notice .notice-icon {
+      width: 30px; height: 30px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1rem; flex-shrink: 0;
+    }
+    .transfer-notice.otp_wrong {
+      background: rgba(239, 68, 68, 0.14);
+      border: 1px solid rgba(239, 68, 68, 0.5);
+      color: #fecaca;
+      box-shadow: 0 0 18px rgba(239, 68, 68, 0.2);
+    }
+    .transfer-notice.otp_wrong .notice-icon { background: linear-gradient(135deg, #ef4444, #b91c1c); }
+    .transfer-notice.otp_ok {
+      background: rgba(34, 197, 94, 0.14);
+      border: 1px solid rgba(34, 197, 94, 0.5);
+      color: #bbf7d0;
+      box-shadow: 0 0 18px rgba(34, 197, 94, 0.2);
+    }
+    .transfer-notice.otp_ok .notice-icon { background: linear-gradient(135deg, #22c55e, #16a34a); }
+    @keyframes noticeIn {
+      from { opacity: 0; transform: translateY(-10px) scale(0.97); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    .otp-error-box {
+      display: none;
+      background: rgba(239, 68, 68, 0.14);
+      border: 1px solid rgba(239, 68, 68, 0.5);
+      color: #fecaca;
+      border-radius: 12px;
+      padding: 0.6rem 0.8rem;
+      margin-bottom: 0.9rem;
+      font-size: 0.82rem;
+      line-height: 1.7;
+      animation: otpShake 0.45s ease;
+    }
+    .otp-error-box.show { display: block; }
+    @keyframes otpShake {
+      0%, 100% { transform: translateX(0); }
+      20% { transform: translateX(-7px); }
+      40% { transform: translateX(7px); }
+      60% { transform: translateX(-5px); }
+      80% { transform: translateX(5px); }
+    }
+
+    /* ========== وضعیت ردیف‌ها / مبلغ اختصاصی ========== */
+    .card-item .card-actions { flex-wrap: wrap; justify-content: flex-end; }
+    .row-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem; margin-top: 0.35rem; direction: rtl; }
+    .amount-chip {
+      display: inline-block; font-size: 0.74rem; padding: 0.15rem 0.55rem; border-radius: 8px;
+      background: rgba(168, 85, 247, 0.15); color: var(--accent-light);
+    }
+    .amount-chip.custom { background: rgba(245, 158, 11, 0.2); color: #fcd34d; }
+    .row-status { display: inline-block; font-size: 0.72rem; font-weight: 600; padding: 0.15rem 0.55rem; border-radius: 8px; }
+    .row-status.none { background: rgba(255, 255, 255, 0.07); color: var(--text-muted); }
+    .row-status.success { background: rgba(34, 197, 94, 0.22); color: #86efac; }
+    .row-status.failed { background: rgba(239, 68, 68, 0.22); color: #fca5a5; }
+    .row-status.skipped { background: rgba(245, 158, 11, 0.22); color: #fcd34d; }
+    .row-status.processing { background: rgba(168, 85, 247, 0.3); color: var(--accent-light); }
+    .row-note { font-size: 0.72rem; color: #fca5a5; margin-top: 0.25rem; direction: rtl; text-align: right; opacity: 0.9; }
+    .btn-amount { background: rgba(245, 158, 11, 0.15); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.3); }
+    .btn-amount:hover { background: rgba(245, 158, 11, 0.28); }
+    .resume-bar {
+      display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;
+      background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.4);
+      border-radius: 14px; padding: 0.7rem 0.9rem; margin-bottom: 0.75rem;
+      font-size: 0.85rem; color: #fcd34d;
+    }
+    .resume-bar .btn { padding: 0.5rem 0.9rem; }
+
+    /* صفحه انتقال: مبلغ هر کارت */
+    .transfer-item-amount { font-size: 0.78rem; font-weight: 600; margin-top: 0.2rem; direction: rtl; text-align: right; }
+    .transfer-item-amount.ok { color: #86efac; }
+    .transfer-item-amount.bad { color: #fca5a5; }
+    .transfer-item-amount.neutral { color: var(--text-muted); }
+    .transfer-total {
+      display: flex; align-items: center; justify-content: space-between;
+      background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3);
+      border-radius: 12px; padding: 0.6rem 0.9rem; margin-bottom: 0.8rem; flex-shrink: 0;
+      font-size: 0.85rem; color: #bbf7d0;
+    }
+    .transfer-total b { font-variant-numeric: tabular-nums; }
+
+    /* سوابق */
+    .history-tabs { display: flex; gap: 0.5rem; margin-bottom: 0.75rem; flex-shrink: 0; }
+    .tab-btn {
+      flex: 1; padding: 0.55rem; font-family: inherit; font-size: 0.85rem; font-weight: 500; cursor: pointer;
+      border-radius: 12px; border: 1px solid rgba(168, 85, 247, 0.3);
+      background: rgba(168, 85, 247, 0.08); color: var(--text-muted); transition: all 0.25s ease;
+    }
+    .tab-btn.active { background: linear-gradient(135deg, var(--accent), var(--accent-dark)); color: #fff; border-color: transparent; }
+    .history-summary { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.75rem; text-align: center; flex-shrink: 0; }
+    .history-item.success { border-color: rgba(34, 197, 94, 0.3); }
+    .history-item.failed { border-color: rgba(239, 68, 68, 0.3); }
+    .history-date { font-size: 0.74rem; color: var(--text-muted); margin-top: 0.2rem; direction: ltr; text-align: right; unicode-bidi: isolate; }
+
+    .history-tools { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; margin-bottom: 0.75rem; flex-shrink: 0; }
+    .history-tools .history-summary { margin-bottom: 0; text-align: right; flex: 1; }
+    .history-tools .btn { padding: 0.5rem 0.8rem; }
+    .history-item .card-actions { flex-direction: column; align-items: flex-end; gap: 0.4rem; }
+
+    /* کلید روشن/خاموش */
+    .switch-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; cursor: pointer; }
+    .switch-text { font-size: 0.92rem; font-weight: 500; text-align: right; }
+    .switch-text small { display: block; font-size: 0.75rem; color: var(--text-muted); font-weight: 300; margin-top: 0.25rem; line-height: 1.8; }
+    .switch { position: relative; width: 48px; height: 27px; flex-shrink: 0; }
+    .switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+    .slider { position: absolute; inset: 0; background: rgba(255, 255, 255, 0.12); border: 1px solid rgba(168, 85, 247, 0.35); border-radius: 30px; transition: 0.25s; }
+    .slider::before { content: ""; position: absolute; width: 19px; height: 19px; top: 3px; right: 3px; background: #fff; border-radius: 50%; transition: 0.25s; }
+    .switch input:checked + .slider { background: linear-gradient(135deg, var(--accent), var(--accent-dark)); }
+    .switch input:checked + .slider::before { transform: translateX(-21px); }
+
+    /* لیست کارت‌های باقی‌مانده در مودال ادامه */
+    .continue-list { max-height: 190px; overflow-y: auto; overflow-x: auto; margin: 0 0 1rem; text-align: right; display: flex; flex-direction: column; gap: 0.4rem; }
+    .continue-row {
+      display: flex; justify-content: space-between; gap: 1.25rem; font-size: 0.8rem; white-space: nowrap;
+      background: rgba(0, 0, 0, 0.3); border-radius: 10px; padding: 0.45rem 0.7rem;
+    }
+    .continue-row .num { direction: ltr; unicode-bidi: isolate; letter-spacing: 0.04em; }
+    .continue-row .amt { color: #fcd34d; white-space: nowrap; }
+    /* عرض پنجرهٔ ادامه به اندازهٔ پهن‌ترین ردیف (شماره کارت + مالک + مبلغ)؛
+       متن‌های بلند بالا/پایین در محاسبهٔ عرض شرکت نمی‌کنند و داخل همان عرض می‌شکنند */
+    #continue-modal .modal { width: max-content; min-width: 320px; max-width: 94vw; }
+    #continue-modal-message, #continue-modal-note { width: 0; min-width: 100%; }
+    .continue-note { font-size: 0.78rem; color: #fcd34d; margin-bottom: 1rem; line-height: 1.8; }
+
     @media (max-width: 640px) {
       .app { padding: 1rem 0.85rem 1rem; max-width: 100%; }
       .glass-card { padding: 1rem; }
@@ -957,6 +1098,9 @@
       <header>
         <button class="nav-btn" id="go-profile-btn" title="پروفایل">
           👤 پروفایل
+        </button>
+        <button class="nav-btn right" id="go-history-btn" title="سوابق">
+          📜 سوابق
         </button>
         <h1>کارت به کارت به روش حاج اشکان</h1>
         <p>یطوری کارت به کارت بکن پشمات بریزه</p>
@@ -995,18 +1139,21 @@
           ">🔄</button>
         </div>
 
+        <div id="main-resume-bar" style="flex-shrink: 0;"></div>
+
         <div class="card-list-wrapper">
           <div class="card-list" id="main-card-list"></div>
         </div>
       </div>
 
       <div class="glass-card amount-section">
-        <div class="amount-label">مبلغ واریزی برای هر حساب (ریال)</div>
+        <div class="amount-label">مبلغ پیش‌فرض واریز برای هر حساب (ریال)</div>
         <div class="amount-input-wrapper">
           <span class="amount-currency">ریال</span>
           <input type="text" class="amount-input" id="amount" placeholder="۰" inputmode="numeric">
         </div>
-        <div class="amount-hint" id="amount-hint">همین مبلغ به همهٔ حساب‌ها واریز می‌شود</div>
+        <div class="amount-hint" id="amount-hint">کارت‌های دارای مبلغ اختصاصی، مبلغ خودشان را می‌گیرند</div>
+        <div class="amount-hint">حداقل مبلغ هر انتقال ۱۰۰ تومان (۱,۰۰۰ ریال) و حداکثر ۳ میلیارد تومان است</div>
       </div>
 
       <button class="transfer-all-btn" id="transfer-btn">
@@ -1047,6 +1194,26 @@
           </div>
         </div>
 
+        <!-- نمایش مرورگر -->
+        <div class="glass-card">
+          <div class="section-header">
+            <div class="section-header-right">
+              <div class="icon">🖥️</div>
+              <span>تنظیمات نمایش</span>
+            </div>
+          </div>
+          <label class="switch-row" for="show-browser-toggle">
+            <span class="switch-text">
+              نمایش مرورگر هنگام کارت‌به‌کارت
+              <small>اگر روشن باشد، موقع انتقال پنجرهٔ مرورگر و صفحه‌های بلو (با همان سشن) روی سیستمی که برنامه روی آن اجرا می‌شود باز می‌شود و می‌توانی فرایند را ببینی. اگر خاموش باشد، مرورگر بدون پنجره اجرا می‌شود. با دکمهٔ «ذخیره» پایین صفحه اعمال می‌شود.</small>
+            </span>
+            <span class="switch">
+              <input type="checkbox" id="show-browser-toggle">
+              <span class="slider"></span>
+            </span>
+          </label>
+        </div>
+
         <!-- لیست اصلی کارت‌ها -->
         <div class="glass-card cards-panel" style="min-height: 280px;">
           <div class="section-header">
@@ -1072,6 +1239,40 @@
       </button>
     </div>
 
+    <!-- ========== صفحه سوابق ========== -->
+    <div class="page" id="page-history">
+      <header>
+        <button class="nav-btn" id="history-back-btn" title="بازگشت">
+          ← صفحه اصلی
+        </button>
+        <h1>سوابق</h1>
+        <p>همهٔ انتقال‌های موفق و ناموفق</p>
+      </header>
+
+      <div class="history-tabs" id="history-tabs">
+        <button type="button" class="tab-btn active" data-filter="all">همه</button>
+        <button type="button" class="tab-btn" data-filter="success">موفق</button>
+        <button type="button" class="tab-btn" data-filter="failed">ناموفق</button>
+      </div>
+      <div class="history-tools">
+        <div class="history-summary" id="history-summary"></div>
+        <button type="button" class="btn btn-danger" id="history-clear-btn">🗑 پاک کردن همه</button>
+      </div>
+
+      <div class="glass-card cards-panel" style="margin-bottom: 0.75rem;">
+        <div class="section-header">
+          <div class="section-header-right">
+            <div class="icon">📜</div>
+            <span>تراکنش‌ها (جدیدترین اول)</span>
+          </div>
+          <span class="card-count" id="history-count">۰ مورد</span>
+        </div>
+        <div class="card-list-wrapper">
+          <div class="card-list" id="history-list"></div>
+        </div>
+      </div>
+    </div>
+
     <!-- ========== صفحه پیشرفت انتقال ========== -->
     <div class="page" id="page-transfer">
       <header>
@@ -1081,6 +1282,11 @@
         <h1>در حال انتقال</h1>
         <p id="transfer-subtitle">لطفاً تا پایان عملیات صبر کنید</p>
       </header>
+
+      <div class="transfer-notice" id="transfer-notice">
+        <div class="notice-icon" id="transfer-notice-icon">!</div>
+        <div id="transfer-notice-text"></div>
+      </div>
 
       <div class="transfer-stats">
         <div class="stat-box success">
@@ -1095,6 +1301,11 @@
           <div class="stat-num" id="stat-total">۰</div>
           <div class="stat-label">کل</div>
         </div>
+      </div>
+
+      <div class="transfer-total">
+        <span>مجموع مبلغ واریز شده</span>
+        <b><span id="transfer-total-paid">۰</span> ریال</b>
       </div>
 
       <div class="progress-bar-wrap">
@@ -1173,7 +1384,8 @@
       <div class="modal-icon" style="background: linear-gradient(135deg, #a855f7, #7c3aed); width: 56px; height: 56px; font-size: 1.5rem;">🔐</div>
       <h3 style="font-size: 1.15rem; margin-bottom: 0.35rem;">کد تأیید</h3>
       <p id="otp-modal-message" style="margin-bottom: 1.1rem; font-size: 0.88rem;">کد ۶ رقمی ارسال‌شده را وارد کنید</p>
-      <input type="text" id="otp-modal-input" class="form-input" maxlength="6" inputmode="numeric" autocomplete="one-time-code" placeholder="------" dir="ltr" style="text-align: center; letter-spacing: 0.35em; font-size: 1.35rem; font-weight: 700; direction: ltr; margin-bottom: 1rem;">
+      <div class="otp-error-box" id="otp-modal-error">❌ کد قبلی اشتباه بود؛ سشن از اول ری‌استارت شد. کد جدیدی که بلو فرستاده را وارد کنید.</div>
+            <input type="text" id="otp-modal-input" class="form-input" maxlength="6" inputmode="numeric" autocomplete="one-time-code" placeholder="------" dir="ltr" style="text-align: center; letter-spacing: 0.35em; font-size: 1.35rem; font-weight: 700; direction: ltr; margin-bottom: 1rem;">
       <div style="display: flex; gap: 0.5rem; width: 100%;">
         <button class="btn btn-primary" id="otp-modal-submit" style="flex: 1; padding: 0.8rem;">تأیید</button>
         <button class="btn btn-secondary" id="otp-modal-cancel" style="flex: 1; padding: 0.8rem;">بعداً</button>
@@ -1198,6 +1410,50 @@
       <div style="display: flex; gap: 0.6rem; width: 100%;">
         <button class="btn btn-primary" id="add-card-confirm" style="flex: 1; padding: 0.85rem;">افزودن</button>
         <button class="btn btn-secondary" id="add-card-cancel" style="flex: 1; padding: 0.85rem;">انصراف</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Amount Modal (مبلغ اختصاصی یک حساب) -->
+  <div class="modal-overlay" id="amount-modal">
+    <div class="modal">
+      <div class="modal-icon" style="background: linear-gradient(135deg, #f59e0b, #d97706);">💰</div>
+      <h3>مبلغ اختصاصی این حساب</h3>
+      <p id="amount-modal-card" style="margin-bottom: 0.5rem; direction: ltr; font-size: 0.85rem;"></p>
+      <p style="font-size: 0.82rem; margin-bottom: 1rem;">اگر خالی بماند، مبلغ پیش‌فرض صفحهٔ اصلی به این حساب واریز می‌شود.<br>حداقل ۱۰۰ تومان (۱,۰۰۰ ریال) و حداکثر ۳ میلیارد تومان.</p>
+      <input type="text" id="amount-modal-input" class="form-input" inputmode="numeric" dir="ltr" placeholder="مبلغ (ریال)" style="text-align: center; font-size: 1.1rem; font-weight: 600; direction: ltr; margin-bottom: 1rem;">
+      <div style="display: flex; gap: 0.5rem; width: 100%;">
+        <button class="btn btn-primary" id="amount-modal-save" style="flex: 1.2; padding: 0.8rem;">ذخیره</button>
+        <button class="btn btn-secondary" id="amount-modal-reset" style="flex: 1; padding: 0.8rem;">پیش‌فرض</button>
+        <button class="btn btn-secondary" id="amount-modal-cancel" style="flex: 1; padding: 0.8rem;">انصراف</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Continue Modal (ادامهٔ کارت‌های باقی‌مانده) -->
+  <div class="modal-overlay" id="continue-modal">
+    <div class="modal">
+      <div class="modal-icon" style="background: linear-gradient(135deg, #f59e0b, #d97706);">⏯️</div>
+      <h3>ادامهٔ کارت‌های باقی‌مانده</h3>
+      <p id="continue-modal-message" style="margin-bottom: 0.8rem;"></p>
+      <div class="continue-list" id="continue-modal-list"></div>
+      <div class="continue-note" id="continue-modal-note"></div>
+      <div style="display: flex; gap: 0.6rem; width: 100%;">
+        <button class="btn btn-primary" id="continue-modal-yes" style="flex: 1.3; padding: 0.85rem;">ادامه بده</button>
+        <button class="btn btn-secondary" id="continue-modal-no" style="flex: 1; padding: 0.85rem;">فعلاً نه</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- History delete confirm -->
+  <div class="modal-overlay" id="history-confirm-modal">
+    <div class="modal">
+      <div class="modal-icon" style="background: linear-gradient(135deg, #ef4444, #b91c1c);">🗑</div>
+      <h3 id="history-confirm-title">حذف سابقه</h3>
+      <p id="history-confirm-text">این کار قابل بازگشت نیست.</p>
+      <div style="display: flex; gap: 0.6rem; width: 100%;">
+        <button class="btn btn-danger" id="history-confirm-yes" style="flex: 1; padding: 0.85rem;">بله، حذف شود</button>
+        <button class="btn btn-secondary" id="history-confirm-no" style="flex: 1; padding: 0.85rem;">انصراف</button>
       </div>
     </div>
   </div>
@@ -1301,7 +1557,8 @@
       secondaryCards: 'haj_ashkan_secondary_cards',
       blueUsername: 'haj_ashkan_blue_username',
       bluePassword: 'haj_ashkan_blue_password',
-      nextId: 'haj_ashkan_next_id'
+      nextId: 'haj_ashkan_next_id',
+      showBrowser: 'haj_ashkan_show_browser'
     };
 
     // ========== State ==========
@@ -1313,6 +1570,22 @@
     let editingPrimaryId = null;
     let editingSecondaryId = null;
 
+    // آخرین وضعیت هر کارت (کلید: شماره ۱۶ رقمی). از حافظهٔ سرور می‌آید (بعد از شروع برنامه خالی است)
+    // و بعد از هر انتقال به‌روز می‌شود. جزو لیست فرعی ذخیره نمی‌شود.
+    let runStatus = (window.BLU_LAST_RUN && typeof window.BLU_LAST_RUN === 'object') ? window.BLU_LAST_RUN : {};
+    let lastJobHadError = false;
+
+    // محدودیت‌های مبلغ هر انتقال (ریال): حداقل ۱۰۰ تومان، حداکثر ۳ میلیارد تومان
+    const MIN_AMOUNT = 1000;
+    const MAX_AMOUNT = 30000000000;
+    const MIN_AMOUNT_MSG = 'حداقل مبلغ انتقال ۱۰۰ تومان (۱,۰۰۰ ریال) است';
+    const MAX_AMOUNT_MSG = 'حداکثر مبلغ انتقال ۳ میلیارد تومان (۳۰,۰۰۰,۰۰۰,۰۰۰ ریال) است';
+    function amountLimitError(v) {
+      if (v < MIN_AMOUNT) return MIN_AMOUNT_MSG;
+      if (v > MAX_AMOUNT) return MAX_AMOUNT_MSG;
+      return '';
+    }
+
     // snapshot برای تشخیص تغییرات ذخیره نشده در پروفایل
     let savedSnapshot = null;
 
@@ -1320,7 +1593,8 @@
       return JSON.stringify({
         cards: primaryCards,
         username: document.getElementById('blue-username').value.trim(),
-        password: document.getElementById('blue-password').value
+        password: document.getElementById('blue-password').value,
+        showBrowser: document.getElementById('show-browser-toggle').checked
       });
     }
 
@@ -1378,6 +1652,7 @@
         const pw = localStorage.getItem(STORAGE.bluePassword) || '';
         document.getElementById('blue-username').value = u;
         document.getElementById('blue-password').value = pw;
+        document.getElementById('show-browser-toggle').checked = localStorage.getItem(STORAGE.showBrowser) === '1';
         updateCredentialHints(u, pw);
       } catch (e) {
         primaryCards = [];
@@ -1401,6 +1676,7 @@
       const pw = document.getElementById('blue-password').value;
       localStorage.setItem(STORAGE.blueUsername, u);
       localStorage.setItem(STORAGE.bluePassword, pw);
+      localStorage.setItem(STORAGE.showBrowser, document.getElementById('show-browser-toggle').checked ? '1' : '0');
       updateCredentialHints(u, pw);
     }
 
@@ -1424,6 +1700,7 @@
       document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
       document.getElementById(pageId).classList.add('active');
       if (pageId === 'page-main') renderSecondaryCards();
+      if (pageId === 'page-history') loadHistory();
       if (pageId === 'page-profile') {
         renderPrimaryCards();
         refreshSnapshot();
@@ -1516,8 +1793,10 @@
             <div class="card-info">
               <div class="card-number">${card.number}</div>
               <div class="card-owner">${card.owner} · کارت ${toPersianDigits(cardIndex)}</div>
+              ${prefix === 'secondary' ? secondaryExtras(card) : ''}
             </div>
             <div class="card-actions">
+              ${prefix === 'secondary' ? `<button class="btn btn-amount" data-action="amount" data-id="${card.id}" data-prefix="${prefix}">مبلغ 💰</button>` : ''}
               <button class="btn btn-danger" data-action="delete" data-id="${card.id}" data-prefix="${prefix}">حذف 🗑</button>
               <button class="btn btn-edit" data-action="edit" data-id="${card.id}" data-prefix="${prefix}">ویرایش ✎</button>
             </div>
@@ -1547,11 +1826,12 @@
       document.getElementById('main-card-count').textContent = toPersianDigits(secondaryCards.length) + ' کارت';
       const hint = document.getElementById('amount-hint');
       if (secondaryCards.length > 0) {
-        hint.textContent = `همین مبلغ به همهٔ ${toPersianDigits(secondaryCards.length)} حساب واریز می‌شود`;
+        hint.textContent = `مبلغ پیش‌فرض برای همهٔ ${toPersianDigits(secondaryCards.length)} حساب؛ کارت‌های دارای مبلغ اختصاصی مبلغ خودشان را می‌گیرند`;
       } else {
         hint.textContent = 'ابتدا از پروفایل لیست اصلی را ذخیره کنید یا اینجا کارت اضافه کنید';
       }
       renderCardList('main-card-list', secondaryCards, editingSecondaryId, 'secondary');
+      renderResumeBar();
     }
 
     // ========== Card Actions (delegated) ==========
@@ -1565,7 +1845,9 @@
       const cards = isPrimary ? primaryCards : secondaryCards;
       let editingId = isPrimary ? editingPrimaryId : editingSecondaryId;
 
-      if (action === 'edit') {
+      if (action === 'amount') {
+        openAmountModal(id);
+      } else if (action === 'edit') {
         if (isPrimary) editingPrimaryId = id;
         else editingSecondaryId = id;
         isPrimary ? renderPrimaryCards() : renderSecondaryCards();
@@ -1811,10 +2093,358 @@
       }
     });
 
+    // ========== وضعیت ردیف‌ها، مبلغ اختصاصی، ادامه، سوابق ==========
+    function escapeHtml(v) {
+      return String(v == null ? '' : v).replace(/[&<>"']/g, ch =>
+        ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+    }
+
+    function fmtAmount(n) {
+      return toPersianDigits(formatAmount(String(parseInt(n, 10) || 0)));
+    }
+
+    function parseAmount(v) {
+      return parseInt(String(v == null ? '' : v).replace(/\D/g, ''), 10) || 0;
+    }
+
+    // مبلغ نهایی یک کارت: مبلغ اختصاصی، وگرنه مبلغ پیش‌فرض
+    function effectiveAmount(card, defaultAmount) {
+      const own = parseAmount(card.amount);
+      return own > 0 ? own : (defaultAmount > 0 ? defaultAmount : 0);
+    }
+
+    function isRemaining(rs) {
+      return !!rs && (rs.status === 'skipped' || (rs.status === 'failed' && !!rs.interrupted));
+    }
+
+    function secondaryExtras(card) {
+      const rs = runStatus[normalizeCardDigits(card.number)];
+      const own = parseAmount(card.amount);
+      const chip = own > 0
+        ? `<span class="amount-chip custom">مبلغ اختصاصی: ${fmtAmount(own)} ریال</span>`
+        : `<span class="amount-chip">مبلغ: پیش‌فرض</span>`;
+      let badge = '<span class="row-status none">بدون وضعیت</span>';
+      let note = '';
+      if (rs) {
+        if (rs.status === 'success') {
+          badge = `<span class="row-status success">✓ موفق · ${fmtAmount(rs.amount)} ریال واریز شد</span>`;
+        } else if (rs.status === 'failed') {
+          badge = `<span class="row-status failed">✕ ناموفق${rs.interrupted ? ' (وسط خطا قطع شد)' : ''}</span>`;
+          if (rs.message) note = `<div class="row-note">${escapeHtml(rs.message)}</div>`;
+        } else if (rs.status === 'skipped') {
+          badge = '<span class="row-status skipped">⏸ هنوز اجرا نشده (مانده)</span>';
+        } else if (rs.status === 'processing') {
+          badge = '<span class="row-status processing">در حال انتقال...</span>';
+        }
+      }
+      return `<div class="row-meta">${chip}${badge}</div>${note}`;
+    }
+
+    // وضعیت کارت‌های انتقال فعلی را در runStatus (برای نمایش در صفحهٔ اصلی) ثبت می‌کند
+    function syncRunStatus() {
+      transferResults.forEach(r => {
+        const d = normalizeCardDigits(r.number);
+        if (!d) return;
+        if (['success', 'failed', 'skipped', 'processing'].includes(r.status)) {
+          runStatus[d] = {
+            status: r.status,
+            message: r.message || '',
+            amount: r.amount || 0,
+            interrupted: !!r.interrupted
+          };
+        } else if (r.status === 'pending') {
+          delete runStatus[d];
+        }
+      });
+    }
+
+    function getRemainingSecondary() {
+      const defaultAmt = parseAmount(document.getElementById('amount').value);
+      return secondaryCards
+        .filter(c => isRemaining(runStatus[normalizeCardDigits(c.number)]))
+        .map(c => {
+          const rs = runStatus[normalizeCardDigits(c.number)];
+          const own = parseAmount(c.amount);
+          return {
+            id: c.id,
+            number: c.number,
+            owner: c.owner,
+            amount: own > 0 ? own : (rs.amount || defaultAmt),
+            interrupted: !!rs.interrupted
+          };
+        });
+    }
+
+    function renderResumeBar() {
+      const bar = document.getElementById('main-resume-bar');
+      if (!bar) return;
+      const remaining = getRemainingSecondary();
+      if (!remaining.length) { bar.innerHTML = ''; return; }
+      bar.innerHTML = `<div class="resume-bar"><span>⏸ ${toPersianDigits(remaining.length)} کارت هنوز واریز نشده‌اند</span><button type="button" class="btn btn-primary" id="resume-btn">ادامهٔ باقی‌مانده‌ها</button></div>`;
+      document.getElementById('resume-btn').addEventListener('click', function(e) {
+        createRipple(e, this);
+        openContinueModal(getRemainingSecondary());
+      });
+    }
+
+    // ---- مودال مبلغ اختصاصی ----
+    let amountModalCardId = null;
+
+    function openAmountModal(id) {
+      const card = secondaryCards.find(c => c.id === id);
+      if (!card) return;
+      amountModalCardId = id;
+      document.getElementById('amount-modal-card').textContent = card.number + ' · ' + card.owner;
+      const inp = document.getElementById('amount-modal-input');
+      const own = parseAmount(card.amount);
+      inp.value = own > 0 ? formatAmount(String(own)) : '';
+      document.getElementById('amount-modal').classList.add('show');
+      setTimeout(() => inp.focus(), 100);
+    }
+
+    function closeAmountModal() {
+      document.getElementById('amount-modal').classList.remove('show');
+      amountModalCardId = null;
+    }
+
+    function saveAmountModal(reset) {
+      const card = secondaryCards.find(c => c.id === amountModalCardId);
+      if (!card) { closeAmountModal(); return; }
+      const val = reset ? 0 : parseAmount(document.getElementById('amount-modal-input').value);
+      if (val > 0) {
+        const limitErr = amountLimitError(val);
+        if (limitErr) { showToast(limitErr, '⚠️'); return; }
+        card.amount = val;
+        showToast('مبلغ اختصاصی ثبت شد', '💰');
+      } else {
+        delete card.amount;
+        showToast('این حساب مبلغ پیش‌فرض را می‌گیرد', '↺');
+      }
+      saveSecondary();
+      closeAmountModal();
+      renderSecondaryCards();
+    }
+
+    document.getElementById('amount-modal-input').addEventListener('input', function() {
+      let d = this.value.replace(/\D/g, '');
+      if (d && parseInt(d, 10) > MAX_AMOUNT) {
+        d = String(MAX_AMOUNT);
+        showToast(MAX_AMOUNT_MSG, '⚠️');
+      }
+      this.value = formatAmount(d);
+    });
+    document.getElementById('amount-modal-input').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') saveAmountModal(false);
+    });
+    document.getElementById('amount-modal-save').addEventListener('click', function(e) {
+      createRipple(e, this); saveAmountModal(false);
+    });
+    document.getElementById('amount-modal-reset').addEventListener('click', function(e) {
+      createRipple(e, this); saveAmountModal(true);
+    });
+    document.getElementById('amount-modal-cancel').addEventListener('click', function(e) {
+      createRipple(e, this); closeAmountModal();
+    });
+    document.getElementById('amount-modal').addEventListener('click', function(e) {
+      if (e.target === this) closeAmountModal();
+    });
+
+    // ---- مودال ادامهٔ کارت‌های باقی‌مانده ----
+    let continueCards = [];
+
+    function openContinueModal(list) {
+      if (!list || !list.length) return;
+      continueCards = list;
+      document.getElementById('continue-modal-message').textContent =
+        `${toPersianDigits(list.length)} کارت هنوز واریز نشده‌اند. می‌خواهید ادامه دهید؟`;
+      document.getElementById('continue-modal-list').innerHTML = list.map(c => `
+        <div class="continue-row">
+          <span class="num">${escapeHtml(c.number)}</span>
+          <span>${escapeHtml(c.owner || '')}</span>
+          <span class="amt">${c.amount ? fmtAmount(c.amount) + ' ریال' : 'مبلغ پیش‌فرض'}</span>
+        </div>`).join('');
+      const interrupted = list.filter(c => c.interrupted);
+      document.getElementById('continue-modal-note').textContent = interrupted.length
+        ? 'توجه: کارتی که هنگام خطا در حال انتقال بود هم در این لیست است. اگر مطمئن نیستید واریز شده یا نه، قبل از ادامه موجودی/اپ بانک را بررسی کنید تا واریز تکراری نشود.'
+        : '';
+      document.getElementById('continue-modal').classList.add('show');
+    }
+
+    document.getElementById('continue-modal-yes').addEventListener('click', function(e) {
+      createRipple(e, this);
+      document.getElementById('continue-modal').classList.remove('show');
+      const defaultAmt = parseAmount(document.getElementById('amount').value);
+      const cards = continueCards.map(c => ({
+        id: c.id, number: c.number, owner: c.owner,
+        amount: c.amount > 0 ? c.amount : defaultAmt
+      }));
+      if (cards.some(c => !(c.amount > 0))) {
+        showToast('برای ادامه، مبلغ پیش‌فرض یا مبلغ اختصاصی کارت‌ها را وارد کنید', '⚠️');
+        return;
+      }
+      const contLimit = cards.map(c => amountLimitError(c.amount)).find(Boolean);
+      if (contLimit) {
+        showToast(contLimit, '⚠️');
+        return;
+      }
+      openTransferPage(cards);
+    });
+    document.getElementById('continue-modal-no').addEventListener('click', function(e) {
+      createRipple(e, this);
+      document.getElementById('continue-modal').classList.remove('show');
+      showToast('وضعیت هر کارت در لیست صفحهٔ اصلی نمایش داده می‌شود', 'ℹ️');
+    });
+
+    // ---- بازگشت از صفحهٔ انتقال ----
+    function leaveTransferPage() {
+      stopTransferPoll();
+      showPage('page-main');
+      if (lastJobHadError) {
+        const remaining = transferResults
+          .filter(r => r.status === 'skipped' || (r.status === 'failed' && r.interrupted))
+          .map(r => ({ id: r.id, number: r.number, owner: r.owner, amount: r.amount, interrupted: !!r.interrupted }));
+        if (remaining.length) openContinueModal(remaining);
+      }
+    }
+
+    // ---- سوابق ----
+    let historyItems = [];
+    let historyFilter = 'all';
+
+    async function loadHistory() {
+      const list = document.getElementById('history-list');
+      list.innerHTML = '<div class="empty-state">در حال بارگذاری...</div>';
+      try {
+        const res = await fetch('/api/history');
+        if (!res.ok) throw await apiError(res);
+        const data = await res.json();
+        historyItems = data.items || [];
+        renderHistory();
+      } catch (err) {
+        list.innerHTML = `<div class="empty-state"><span>⚠️</span>${escapeHtml(err.message || 'دریافت سوابق ممکن نشد')}</div>`;
+      }
+    }
+
+    function renderHistory() {
+      const list = document.getElementById('history-list');
+      const items = historyItems.filter(h => historyFilter === 'all' || h.status === historyFilter);
+      const okItems = historyItems.filter(h => h.status === 'success');
+      const failItems = historyItems.filter(h => h.status === 'failed');
+      const paid = okItems.reduce((s, h) => s + (parseInt(h.amount, 10) || 0), 0);
+      document.getElementById('history-count').textContent = toPersianDigits(items.length) + ' مورد';
+      document.getElementById('history-summary').textContent =
+        `${toPersianDigits(okItems.length)} موفق · ${toPersianDigits(failItems.length)} ناموفق · مجموع واریز موفق: ${fmtAmount(paid)} ریال`;
+      document.querySelectorAll('#history-tabs .tab-btn').forEach(b =>
+        b.classList.toggle('active', b.dataset.filter === historyFilter));
+
+      if (!items.length) {
+        list.innerHTML = '<div class="empty-state"><span>📭</span>سابقه‌ای ثبت نشده</div>';
+        return;
+      }
+      list.innerHTML = items.map(h => {
+        const ok = h.status === 'success';
+        return `
+          <div class="card-item history-item ${ok ? 'success' : 'failed'}">
+            <div class="card-avatar">${avatarSVG()}</div>
+            <div class="card-info">
+              <div class="card-number">${escapeHtml(h.number)}</div>
+              <div class="card-owner">${escapeHtml(h.owner)}</div>
+              <div class="transfer-item-amount ${ok ? 'ok' : 'bad'}">${ok ? 'واریز شد' : 'واریز نشد'} · ${fmtAmount(h.amount)} ریال</div>
+              ${h.message ? `<div class="transfer-item-msg">${escapeHtml(h.message)}</div>` : ''}
+              <div class="history-date">${toPersianDigits(escapeHtml(h.jdate))}</div>
+            </div>
+            <div class="card-actions">
+              <span class="transfer-status-badge ${ok ? 'success' : 'failed'}">${ok ? 'موفق' : 'ناموفق'}</span>
+              <button class="btn btn-danger" data-hdel="${h.id}">حذف 🗑</button>
+            </div>
+          </div>`;
+      }).join('');
+      document.getElementById('history-clear-btn').style.display = historyItems.length ? '' : 'none';
+    }
+
+    document.getElementById('history-tabs').addEventListener('click', e => {
+      const btn = e.target.closest('[data-filter]');
+      if (!btn) return;
+      historyFilter = btn.dataset.filter;
+      renderHistory();
+    });
+    // ---- حذف سوابق (تکی یا همه) ----
+    let pendingHistoryDelete = null; // 'all' یا شناسهٔ یک سابقه
+
+    function askHistoryDelete(target) {
+      pendingHistoryDelete = target;
+      const all = target === 'all';
+      document.getElementById('history-confirm-title').textContent = all ? 'پاک کردن همهٔ سوابق' : 'حذف این سابقه';
+      document.getElementById('history-confirm-text').textContent = all
+        ? `همهٔ ${toPersianDigits(historyItems.length)} سابقه برای همیشه پاک می‌شود و قابل بازگشت نیست.`
+        : 'این سابقه برای همیشه پاک می‌شود و قابل بازگشت نیست.';
+      document.getElementById('history-confirm-modal').classList.add('show');
+    }
+
+    function closeHistoryConfirm() {
+      document.getElementById('history-confirm-modal').classList.remove('show');
+      pendingHistoryDelete = null;
+    }
+
+    document.getElementById('history-list').addEventListener('click', e => {
+      const btn = e.target.closest('[data-hdel]');
+      if (btn) askHistoryDelete(parseInt(btn.dataset.hdel, 10));
+    });
+    document.getElementById('history-clear-btn').addEventListener('click', function(e) {
+      createRipple(e, this);
+      if (historyItems.length) askHistoryDelete('all');
+    });
+    document.getElementById('history-confirm-no').addEventListener('click', function(e) {
+      createRipple(e, this);
+      closeHistoryConfirm();
+    });
+    document.getElementById('history-confirm-modal').addEventListener('click', function(e) {
+      if (e.target === this) closeHistoryConfirm();
+    });
+    document.getElementById('history-confirm-yes').addEventListener('click', async function(e) {
+      createRipple(e, this);
+      const target = pendingHistoryDelete;
+      if (target === null) return;
+      closeHistoryConfirm();
+      try {
+        const res = await fetch(target === 'all' ? '/api/history/clear' : '/api/history/delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(target === 'all' ? {} : { id: target })
+        });
+        if (!res.ok) throw await apiError(res);
+        showToast(target === 'all' ? 'همهٔ سوابق پاک شد' : 'سابقه حذف شد', '🗑');
+        await loadHistory();
+      } catch (err) {
+        showToast(err.message || 'حذف سابقه ممکن نشد', '⚠️');
+      }
+    });
+
+    document.getElementById('go-history-btn').addEventListener('click', function(e) {
+      createRipple(e, this);
+      showPage('page-history');
+    });
+    document.getElementById('history-back-btn').addEventListener('click', function(e) {
+      createRipple(e, this);
+      showPage('page-main');
+    });
+
     // ========== Amount ==========
     const amountInput = document.getElementById('amount');
     amountInput.addEventListener('input', function() {
-      this.value = formatAmount(this.value);
+      let d = this.value.replace(/\D/g, '');
+      if (d && parseInt(d, 10) > MAX_AMOUNT) {
+        d = String(MAX_AMOUNT);
+        showToast(MAX_AMOUNT_MSG, '⚠️');
+      }
+      this.value = formatAmount(d);
+    });
+    amountInput.addEventListener('blur', function() {
+      const v = parseAmount(this.value);
+      if (v > 0 && v < MIN_AMOUNT) {
+        this.value = '';
+        showToast(MIN_AMOUNT_MSG, '⚠️');
+      }
     });
 
     // ========== Transfer API ==========
@@ -1842,12 +2472,17 @@
       need_otp: 'نیاز به OTP'
     };
 
-    function showOtpModal(show, message) {
+    function showOtpModal(show, message, isWrong) {
       const modal = document.getElementById('otp-modal');
       if (!modal) return;
       if (show) {
         const msg = document.getElementById('otp-modal-message');
         if (msg) msg.textContent = message || 'کد ۶ رقمی ارسال‌شده را وارد کنید';
+        const errBox = document.getElementById('otp-modal-error');
+        if (errBox) {
+          errBox.classList.remove('show');
+          if (isWrong) { void errBox.offsetWidth; errBox.classList.add('show'); }
+        }
         const inp = document.getElementById('otp-modal-input');
         if (inp) {
           inp.value = '';
@@ -1876,13 +2511,21 @@
         const badgeClass = item.status || 'pending';
         const badgeText = STATUS_LABEL[badgeClass] || badgeClass;
         const spinner = item.status === 'processing' ? '<span class="mini-spinner"></span>' : '';
+        let amountLine = '';
+        if (item.amount) {
+          const amt = fmtAmount(item.amount);
+          if (item.status === 'success') amountLine = `<div class="transfer-item-amount ok">واریز شد: ${amt} ریال</div>`;
+          else if (item.status === 'failed') amountLine = `<div class="transfer-item-amount bad">واریز نشد · مبلغ: ${amt} ریال</div>`;
+          else if (item.status === 'skipped') amountLine = `<div class="transfer-item-amount neutral">اجرا نشد · مبلغ: ${amt} ریال</div>`;
+          else amountLine = `<div class="transfer-item-amount neutral">مبلغ: ${amt} ریال</div>`;
+        }
         const msg = item.message ? `<div class="transfer-item-msg">${item.message}</div>` : '';
         el.innerHTML = `
           <div class="card-avatar">${avatarSVG()}</div>
           <div class="card-info">
             <div class="card-number">${item.number}</div>
             <div class="card-owner">${item.owner || 'مالک حساب'} · کارت ${toPersianDigits(index + 1)}</div>
-            ${msg}
+            ${amountLine}${msg}
           </div>
           <span class="transfer-status-badge ${badgeClass}">${spinner}${badgeText}</span>
         `;
@@ -1890,7 +2533,38 @@
       });
     }
 
+    // ---- اعلان‌های لحظه‌ای (OTP درست/اشتباه) ----
+    let lastNoticeSeq = 0;
+    let noticeHideTimer = null;
+
+    function showTransferNotice(kind, text) {
+      const box = document.getElementById('transfer-notice');
+      box.className = 'transfer-notice show ' + kind;
+      document.getElementById('transfer-notice-icon').textContent = kind === 'otp_ok' ? '✓' : '✕';
+      document.getElementById('transfer-notice-text').textContent = text;
+      clearTimeout(noticeHideTimer);
+      if (kind === 'otp_ok') {
+        noticeHideTimer = setTimeout(() => box.classList.remove('show'), 7000);
+      }
+    }
+
+    function resetTransferNotice() {
+      lastJobHadError = false;
+      lastNoticeSeq = 0;
+      clearTimeout(noticeHideTimer);
+      const box = document.getElementById('transfer-notice');
+      if (box) box.classList.remove('show');
+    }
+
+    function handleNotice(n) {
+      if (!n || !n.seq || n.seq <= lastNoticeSeq) return;
+      lastNoticeSeq = n.seq;
+      showTransferNotice(n.kind, n.text);
+      showToast(n.text, n.kind === 'otp_ok' ? '✓' : '⚠️');
+    }
+
     function updateTransferUI(data) {
+      handleNotice(data.notice);
       const results = data.results || transferResults;
       if (Array.isArray(results) && results.length) {
         // merge by id or index
@@ -1911,6 +2585,12 @@
       const failCount = transferResults.filter(r => r.status === 'failed').length;
       const total = transferResults.length;
       const doneCount = successCount + failCount;
+      const totalPaid = transferResults
+        .filter(r => r.status === 'success')
+        .reduce((sum, r) => sum + (parseInt(r.amount, 10) || 0), 0);
+      document.getElementById('transfer-total-paid').textContent = fmtAmount(totalPaid);
+      syncRunStatus();
+      if (data.error) lastJobHadError = true;
 
       document.getElementById('stat-success').textContent = toPersianDigits(successCount);
       document.getElementById('stat-fail').textContent = toPersianDigits(failCount);
@@ -1937,7 +2617,7 @@
         // فقط اگر مودال باز نیست، باز کن تا ورودی کاربر پاک نشود
         const otpModal = document.getElementById('otp-modal');
         if (!otpModal.classList.contains('show')) {
-          showOtpModal(true, data.otp_message || 'کد ۶ رقمی ارسال‌شده را وارد کنید');
+          showOtpModal(true, data.otp_message || 'کد ۶ رقمی ارسال‌شده را وارد کنید', !!data.otp_wrong);
         }
         document.getElementById('transfer-done-btn').style.display = 'none';
       } else if (overall === 'completed' || overall === 'failed' || (doneCount >= total && total > 0 && overall !== 'running' && overall !== 'need_otp')) {
@@ -2016,6 +2696,7 @@
         if (r.status === 'processing') {
           r.status = 'failed';
           r.message = message;
+          r.interrupted = true;
         } else if (r.status === 'pending') {
           r.status = 'skipped';
           r.message = 'اجرا نشد';
@@ -2027,6 +2708,7 @@
     // اتصال به کاری که از قبل روی سرور در جریان است (رفرش صفحه یا شروع دوباره‌ی هم‌زمان)
     async function attachToJob(jobId) {
       transferJobId = jobId;
+      resetTransferNotice();
       transferResults = [];
       document.getElementById('transfer-done-btn').style.display = 'none';
       document.getElementById('transfer-back-btn').style.display = 'none';
@@ -2103,11 +2785,13 @@
       tick();
     }
 
-    function openTransferPage(cards, amount) {
+    function openTransferPage(cards) {
+      resetTransferNotice();
       transferResults = cards.map(c => ({
         id: c.id,
         number: c.number,
         owner: c.owner,
+        amount: c.amount,
         status: 'pending',
         message: ''
       }));
@@ -2122,11 +2806,11 @@
 
       // یوزر/پسورد بلو دیگر از مرورگر فرستاده نمی‌شود؛ سرور از دیتابیس (پروفایل) می‌خواند
       const payload = {
-        amount: String(amount),
         cards: cards.map(c => ({
           id: c.id,
           number: c.number.replace(/-/g, ''),
-          owner: c.owner
+          owner: c.owner,
+          amount: c.amount
         }))
       };
 
@@ -2227,20 +2911,31 @@
         return;
       }
 
-      const amount = amountInput.value.replace(/,/g, '');
-      if (!amount || parseInt(amount, 10) <= 0) {
-        showToast('مبلغ معتبر (به ریال) وارد کنید', '⚠️');
+      const defaultAmount = parseAmount(amountInput.value);
+      const cardsToSend = deepClone(secondaryCards);
+      for (let i = 0; i < cardsToSend.length; i++) {
+        cardsToSend[i].amount = effectiveAmount(cardsToSend[i], defaultAmount);
+        if (cardsToSend[i].amount <= 0) {
+          showToast(`برای کارت ${toPersianDigits(i + 1)} مبلغی تعیین نشده؛ مبلغ پیش‌فرض یا مبلغ اختصاصی وارد کنید`, '⚠️');
+          return;
+        }
+      }
+
+      const limitMsg = cardsToSend
+        .map((c, i) => { const m = amountLimitError(c.amount); return m ? `کارت ${toPersianDigits(i + 1)}: ${m}` : ''; })
+        .find(Boolean);
+      if (limitMsg) {
+        showToast(limitMsg, '⚠️');
         return;
       }
 
-      openTransferPage(deepClone(secondaryCards), amount);
+      openTransferPage(cardsToSend);
       setTimeout(() => { amountInput.value = ''; }, 400);
     });
 
     document.getElementById('transfer-done-btn').addEventListener('click', function(e) {
       createRipple(e, this);
-      stopTransferPoll();
-      showPage('page-main');
+      leaveTransferPage();
     });
     document.getElementById('transfer-back-btn').addEventListener('click', function(e) {
       createRipple(e, this);
@@ -2248,8 +2943,7 @@
         showToast('انتقال هنوز تمام نشده است', '⚠️');
         return;
       }
-      stopTransferPoll();
-      showPage('page-main');
+      leaveTransferPage();
     });
 
     document.getElementById('close-modal').addEventListener('click', function(e) {

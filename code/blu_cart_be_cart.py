@@ -1,10 +1,13 @@
 import os
-from time import sleep
+import re
+import shutil
+import sys
+from time import sleep, time
 from random import randint
 
 from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -12,8 +15,42 @@ from selenium.common.exceptions import ElementClickInterceptedException
 
 # مسیرها نسبت به همین فایل هستند تا از هر جایی (مثلاً از app.py) درست کار کنند
 CODE_DIR = os.path.dirname(os.path.abspath(__file__))
-CHROMEDRIVER_PATH = os.path.normpath(os.path.join(CODE_DIR, "..", "chromedriver"))
 CHROME_PROFILE_DIR = os.path.join(CODE_DIR, "chrome-profile")  # سشن ورود بلو اینجا می‌ماند
+
+ROOT_DIR = os.path.dirname(CODE_DIR)
+
+
+def find_driver():
+    """درایور مناسب سیستم‌عامل فعلی را از داخل فولدر پروژه پیدا می‌کند (یا None).
+
+    ساختار پیشنهادی (هر دو را می‌توانی هم‌زمان بگذاری):
+        blu/drivers/windows/chromedriver.exe
+        blu/drivers/linux/chromedriver
+    کنار app.py (chromedriver یا chromedriver.exe) هم پیدا می‌شود.
+    اگر پیدا نشد None برمی‌گردد و Selenium Manager خودکار دانلود می‌کند.
+    """
+    if sys.platform.startswith("win"):
+        folder, name = "windows", "chromedriver.exe"
+    elif sys.platform == "darwin":
+        folder, name = "mac", "chromedriver"
+    else:
+        folder, name = "linux", "chromedriver"
+
+    candidates = [
+        os.path.join(ROOT_DIR, "drivers", folder, name),
+        os.path.join(ROOT_DIR, "drivers", name),
+        os.path.join(ROOT_DIR, name),
+        os.path.join(CODE_DIR, name),
+    ]
+    for path in candidates:
+        if os.path.isfile(path):
+            if not sys.platform.startswith("win") and not os.access(path, os.X_OK):
+                try:  # روی لینوکس/مک اجازهٔ اجرا بده
+                    os.chmod(path, os.stat(path).st_mode | 0o111)
+                except OSError:
+                    pass
+            return path
+    return None
 
 # مرورگر پیش‌فرض بدون پنجره (headless) اجرا می‌شود؛ برای دیدن مرورگر: BLU_HEADLESS=0
 HEADLESS = os.environ.get("BLU_HEADLESS", "1") != "0"
@@ -34,6 +71,10 @@ class OtpError(Exception):
     """خطاهای مربوط به کد تأیید (OTP)."""
 
 
+class WrongOtp(OtpError):
+    """کد تأیید وارد شده اشتباه بود («کد تایید نادرست است»)؛ سشن از اول ری‌استارت می‌شود."""
+
+
 class OtpTimeout(OtpError):
     """کاربر در زمان مقرر OTP را وارد نکرد."""
 
@@ -45,6 +86,175 @@ class InsufficientBalance(Exception):
         super().__init__(f"balance={balance} needed={needed}")
         self.balance = balance
         self.needed = needed
+
+
+class InvalidCard(Exception):
+    """بلو گفته شماره کارت/شبا نادرست است؛ فقط همین کارت رد می‌شود و بقیه ادامه پیدا می‌کنند."""
+
+
+class AmountLimitExceeded(Exception):
+    """مبلغ از سقف مجاز انتقال بیشتر است؛ کل عملیات متوقف می‌شود."""
+
+
+class InvalidInfo(Exception):
+    """بلو گفته اطلاعات وارد شده نادرست است؛ کل عملیات متوقف می‌شود."""
+
+
+class UnknownBluError(Exception):
+    """بلو موقع ورود «خطای ناشناخته» داد. چند بار با ری‌استارت مرورگر تلاش می‌شود؛ بعدش کل عملیات متوقف می‌شود."""
+
+
+class BalanceUnreadable(Exception):
+    """موجودی از صفحهٔ بلو خوانده نشد؛ برای احتیاط هیچ واریزی انجام نمی‌شود و کل عملیات متوقف می‌شود."""
+
+
+MIN_BALANCE_BUFFER = 50000  # ریال: بعد از انتقال باید حداقل این مقدار (کارمزد و احتیاط) در حساب بماند
+
+# خطای ناشناخته‌ی بلو موقع ورود: ابتدا چند بار با همان پروفایل، بعد پاک کردن پروفایل و چند بار دیگر
+TRIES_BEFORE_RESET = 3  # تلاش با پروفایل (سشن) فعلی
+TRIES_AFTER_RESET = 3   # تلاش بعد از پاک کردن پروفایل (ورود از صفر، با OTP)
+
+# متن خطاهای بلو (فقط بخش ثابت متن؛ عدد/فاصله‌های بعدی مهم نیست)
+ERR_CARD_TEXT = "شماره کارت یا شبا نادرست است"
+ERR_LIMIT_TEXT = "حداکثر مبلغ انتقال"
+ERR_INFO_TEXT = "اطلاعات وارد شده نادرست است"
+ERR_UNKNOWN_TEXT = "خطای ناشناخته"
+ERR_OTP_TEXTS = ("کد تایید نادرست", "کد تأیید نادرست")
+
+
+def _error_xpath(text):
+    return (f'//*[self::div or self::span or self::p]'
+            f'[contains(normalize-space(text()), "{text}")]')
+
+
+def _visible_error(driver, text):
+    try:
+        for el in driver.find_elements(By.XPATH, _error_xpath(text)):
+            if el.is_displayed():
+                return True
+    except Exception as e:
+        print("[error-check] failed:", type(e).__name__, str(e)[:120])
+    return False
+
+
+def check_page_errors(driver, card=False, amount=False, info=False, unknown=False):
+    """اگه یکی از پیام‌های خطای بلو (از بین موارد خواسته‌شده) روی صفحه باشه exception می‌ده.
+    card:   «شماره کارت یا شبا نادرست است»  -> InvalidCard (فقط همین کارت رد می‌شه)
+    amount: «حداکثر مبلغ انتقال ... است»     -> AmountLimitExceeded (توقف کل عملیات)
+    info:   «اطلاعات وارد شده نادرست است»    -> InvalidInfo (توقف کل عملیات)
+    unknown:«خطای ناشناخته ای رخ داده است»   -> UnknownBluError (ری‌استارت مرورگر، حداکثر ۳ بار)"""
+    if card and _visible_error(driver, ERR_CARD_TEXT):
+        raise InvalidCard("invalid card number")
+    if amount and _visible_error(driver, ERR_LIMIT_TEXT):
+        raise AmountLimitExceeded("max transfer amount exceeded")
+    if info and _visible_error(driver, ERR_INFO_TEXT):
+        raise InvalidInfo("bank says entered info is invalid")
+    if unknown and _visible_error(driver, ERR_UNKNOWN_TEXT):
+        raise UnknownBluError("bank says unknown error")
+
+
+OTP_INPUT_XPATH = '//input[@autocomplete="one-time-code" and not(@disabled)]'
+HOME_NAV_XPATH = '//*[@id="root"]/div[1]/div[3]/nav/div[2]'
+NOT_NOW_XPATH = '//button[.//span[normalize-space()="الان نه!"]]'
+
+
+def reset_profile(tries=5):
+    """پوشه‌ی chrome-profile (سشن ذخیره‌شده‌ی بلو) رو پاک می‌کنه؛ بعد از بسته شدن مرورگر صدا زده بشه.
+    ممکنه کروم هنوز فایل‌ها رو قفل کرده باشه، پس چند بار با فاصله تلاش می‌کنه."""
+    for _ in range(tries):
+        shutil.rmtree(CHROME_PROFILE_DIR, ignore_errors=True)
+        if not os.path.exists(CHROME_PROFILE_DIR):
+            print("[profile] chrome-profile deleted")
+            return True
+        sleep(1)
+    print("[profile] could not fully delete chrome-profile")
+    return False
+
+
+def save_debug(driver, tag):
+    """اسکرین‌شات و HTML صفحه رو برای عیب‌یابی توی code/debug ذخیره می‌کنه."""
+    try:
+        d = os.path.join(CODE_DIR, "debug")
+        os.makedirs(d, exist_ok=True)
+        stamp = int(time())
+        driver.save_screenshot(os.path.join(d, f"{tag}-{stamp}.png"))
+        with open(os.path.join(d, f"{tag}-{stamp}.html"), "w", encoding="utf-8") as f:
+            f.write(driver.page_source)
+        print("[debug] saved", tag, stamp)
+    except Exception as e:
+        print("[debug] save failed:", e)
+
+
+def wait_login_outcome(driver, timeout=45, next_stable=3):
+    """بعد از زدن «ورود به بلو» منتظر xpath فیلد OTP می‌مونه.
+       "otp"  -> فیلد OTP دیده شد (فقط همین‌جا از کاربر کد خواسته می‌شه)
+       "next" -> OTP نیومد و صفحه‌ی اصلی/«الان نه!» حداقل next_stable ثانیه پشت‌سرهم پایدار بود
+                 (یعنی بلو این بار OTP نخواست)
+       None   -> تا timeout هیچ‌کدوم نشد
+    در این مدت خطاهای ورود («اطلاعات وارد شده نادرست است» / «خطای ناشناخته») هم چک می‌شن."""
+    end = time() + timeout
+    next_since = None
+    while time() < end:
+        check_page_errors(driver, info=True, unknown=True)
+        try:
+            # اولویت با OTP است
+            for el in driver.find_elements(By.XPATH, OTP_INPUT_XPATH):
+                if el.is_displayed():
+                    return "otp"
+            if driver.find_elements(By.XPATH, HOME_NAV_XPATH) or driver.find_elements(By.XPATH, NOT_NOW_XPATH):
+                next_since = next_since or time()
+                if time() - next_since >= next_stable:
+                    return "next"
+            else:
+                next_since = None
+        except Exception:
+            pass
+        sleep(0.3)
+    return None
+
+
+def wait_otp_result(driver, timeout=20, stable=2):
+    """بعد از وارد کردن OTP نتیجه رو مشخص می‌کنه:
+       WrongOtp  -> «کد تایید نادرست است» دیده شد
+       True      -> کد پذیرفته شد (صفحه‌ی اصلی/«الان نه!» اومد یا فیلد OTP حداقل `stable` ثانیه ناپدید شد)
+       None      -> تا timeout نامشخص بود
+    خطاهای «اطلاعات نادرست» و «خطای ناشناخته» هم همین‌جا چک می‌شن."""
+    end = time() + timeout
+    gone_since = None
+    while time() < end:
+        for t in ERR_OTP_TEXTS:
+            if _visible_error(driver, t):
+                raise WrongOtp("wrong otp")
+        check_page_errors(driver, info=True, unknown=True)
+        try:
+            if driver.find_elements(By.XPATH, HOME_NAV_XPATH) or driver.find_elements(By.XPATH, NOT_NOW_XPATH):
+                return True
+            shown = any(e.is_displayed() for e in driver.find_elements(By.XPATH, '//input[@autocomplete="one-time-code"]'))
+            if shown:
+                gone_since = None
+            else:
+                gone_since = gone_since or time()
+                if time() - gone_since >= stable:
+                    return True
+        except Exception:
+            pass
+        sleep(0.3)
+    return None
+
+
+def wait_click_or_error(driver, xpath, tag, timeout=30, **checks):
+    """مثل wait_click ولی اگه تو این فاصله پیام خطای خواسته‌شده ظاهر بشه فوراً exception می‌ده
+    (چون با خطا معمولاً دکمه غیرفعال می‌شه و بدون این، تا ۳۰ ثانیه منتظر می‌موند)."""
+    def cond(d):
+        check_page_errors(d, **checks)
+        for el in d.find_elements(By.XPATH, xpath):
+            if el.is_displayed() and el.is_enabled():
+                return True
+        return False
+    sleep(0.5)  # فرصت برای ظاهر شدن پیام اعتبارسنجی بعد از وارد کردن مقدار
+    check_page_errors(driver, **checks)
+    WebDriverWait(driver, timeout, poll_frequency=0.3).until(cond)
+    return wait_click(driver, xpath, tag, timeout)
 
 
 def _notify(on_progress, event, index, detail=""):
@@ -69,7 +279,7 @@ def close_stories(driver, wait_appear=2, tries=3):
         try:
             x = driver.find_element(By.XPATH, STORY_CLOSE_XPATH)
             driver.execute_script("arguments[0].click();", x)
-        except Exception as e:
+        except Exception:
             pass
         sleep(0.4)
 
@@ -84,13 +294,10 @@ def close_stories(driver, wait_appear=2, tries=3):
 
 
 def wait_click(driver, xpath, tag, timeout=30):
-    """صبر می‌کنه تا دکمه قابل کلیک بشه و کلیک می‌کنه؛ اگه timeout شد debug ذخیره می‌کنه."""
-    try:
-        el = WebDriverWait(driver, timeout).until(
-            EC.element_to_be_clickable((By.XPATH, xpath))
-        )
-    except Exception:
-        raise
+    """صبر می‌کنه تا دکمه قابل کلیک بشه و کلیک می‌کنه."""
+    el = WebDriverWait(driver, timeout).until(
+        EC.element_to_be_clickable((By.XPATH, xpath))
+    )
     try:
         el.click()
     except ElementClickInterceptedException:
@@ -116,19 +323,65 @@ def set_react_input(driver, element, value):
     """, element, str(value))
 
 
+_BALANCE_DIGITS = str.maketrans("۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩", "01234567890123456789")
+
+
+def parse_balance(text):
+    """متن موجودی صفحه (مثلاً «موجودی: ۱٬۲۳۴٬۵۶۷ ریال») را به عدد (ریال) تبدیل می‌کند.
+    اگر قالب متن آن چیزی نبود که انتظار می‌رود، None برمی‌گرداند (هرگز حدس نمی‌زند)."""
+    if not text or ":" not in text:
+        return None
+    part = text.split(":", 1)[1].translate(_BALANCE_DIGITS)
+    m = re.search(r"\d[\d,٬]*", part)
+    if not m:
+        return None
+    digits = m.group(0).replace(",", "").replace("٬", "")
+    return int(digits) if digits else None
+
+
+def read_balance(driver, timeout=30):
+    """منتظر می‌ماند تا موجودی واقعاً روی صفحه نمایش داده شود و عددش را برمی‌گرداند.
+    اگر تا timeout خوانده نشد BalanceUnreadable می‌دهد (و واریزی انجام نمی‌شود)."""
+    xpath = '//*[@id="root"]/div[1]/div[3]/div[1]/div[1]/div/div/section/div/div'
+    holder = {}
+
+    def cond(d):
+        for el in d.find_elements(By.XPATH, xpath):
+            value = parse_balance(el.text)
+            if value is not None:
+                holder["value"] = value
+                return True
+        return False
+
+    try:
+        WebDriverWait(driver, timeout, poll_frequency=0.3).until(cond)
+    except Exception:
+        raise BalanceUnreadable("balance not readable")
+    return holder["value"]
+
+
 def run(data, user_name, pass_word, cash_pay, get_otp=None, on_progress=None, headless=None):
     """
+    data:          [(شماره کارت، نام مالک)] یا [(شماره کارت، نام مالک، مبلغ اختصاصی)]
+                   اگه مبلغ اختصاصی نباشه، cash_pay (مبلغ پیش‌فرض) واریز می‌شه.
     get_otp():     وقتی بلو کد تأیید خواست صدا زده می‌شه و باید رشته‌ی OTP رو برگردونه
                    (اگه None باشه از ترمینال input می‌گیره).
-    on_progress(event, index, detail): event یکی از card_start | step | card_done
+    on_progress(event, index, detail): event یکی از card_start | step | card_done | card_failed | otp_ok | otp_wrong
     headless:      None یعنی از HEADLESS بالای فایل استفاده کن.
     """
     if headless is None:
         headless = HEADLESS
     result = []
-    for index, (shomareh_cart, name) in enumerate(data):
+    default_amount = int(cash_pay) if cash_pay else 0
+    for index, item in enumerate(data):
+        shomareh_cart, name = item[0], item[1]
+        card_amount = int(item[2]) if len(item) > 2 and item[2] else default_amount
+        if card_amount <= 0:
+            raise ValueError(f"مبلغ کارت شمارهٔ {index + 1} مشخص نیست")
         _notify(on_progress, "card_start", index)
         while_stop = True
+        unknown_fails = 0        # تعداد «خطای ناشناخته» در مرحلهٔ فعلی (قبل/بعد از پاک شدن پروفایل)
+        profile_reset = False    # آیا پروفایل برای این کارت پاک شده؟
         while while_stop:
             random_num_for_sleep = randint(5, 15) / 10
 
@@ -142,14 +395,16 @@ def run(data, user_name, pass_word, cash_pay, get_otp=None, on_progress=None, he
             options.add_argument("--window-size=390,844")
             options.add_argument("--user-agent=Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1")
 
-            service = Service(CHROMEDRIVER_PATH)
-
+            # درایور محلی اگر بود، وگرنه Selenium Manager خودش پیدا/دانلود می‌کند
+            driver_path = find_driver()
+            print("DRIVER:", driver_path or "auto (Selenium Manager)")
+            service = Service(driver_path) if driver_path else Service()
             driver = webdriver.Chrome(service=service, options=options)
             sleep(random_num_for_sleep)
 
             print("TITLE:", driver.title)
             print("URL:", driver.current_url)
-            
+
             try:
                 # ---------- ورود ----------
                 _notify(on_progress, "step", index, "ورود به بلو")
@@ -189,21 +444,24 @@ def run(data, user_name, pass_word, cash_pay, get_otp=None, on_progress=None, he
 
                 wait_click(driver, '//button[.//span[contains(text(),"ورود به بلو")]]', "login")
                 sleep(random_num_for_sleep)
+                # بعد از ورود: خطاهای ورود چک می‌شن و منتظر فیلد OTP (یا رد شدن بدون OTP) می‌مونیم
+                _notify(on_progress, "step", index, "در انتظار پاسخ بلو بعد از ورود")
+                outcome = wait_login_outcome(driver)
+                print("[login] outcome:", outcome)
 
-                try:
-                    otp_input = WebDriverWait(driver, 7).until(
-                        EC.element_to_be_clickable((
-                            By.XPATH,
-                            '//input[@autocomplete="one-time-code" and not(@disabled)]'
-                        ))
+                if outcome == "otp":
+                    otp_input = WebDriverWait(driver, 10).until(
+                        EC.element_to_be_clickable((By.XPATH, OTP_INPUT_XPATH))
                     )
                     otp = (get_otp() if get_otp else input("OTP: ")).strip()
                     otp_input.send_keys(otp)
                     sleep(random_num_for_sleep)
-                except OtpError:
-                    raise  # تایم‌اوت OTP نباید نادیده گرفته بشه
-                except Exception:
-                    pass
+                    # نتیجهٔ کد: اشتباه -> WrongOtp (ری‌استارت)، درست -> به کاربر اطلاع می‌دیم
+                    _notify(on_progress, "step", index, "بررسی کد تأیید")
+                    if wait_otp_result(driver):
+                        _notify(on_progress, "otp_ok", index, "")
+                elif outcome is None:
+                    save_debug(driver, "login-no-otp")  # عیب‌یابی: ببین صفحه چی نشون می‌داد
 
                 try:
                     not_now_button = WebDriverWait(driver, 5).until(
@@ -237,24 +495,25 @@ def run(data, user_name, pass_word, cash_pay, get_otp=None, on_progress=None, he
                 shomareh_cart_replay.send_keys(shomareh_cart)
                 sleep(random_num_for_sleep)
 
-                wait_click(driver, '//*[@id="root"]/div[1]/div[3]/div[2]/button', "ersal1")
+                # شماره کارت نادرست: هنگام زدن دکمه ادامه خطا میاد -> فقط همین کارت رد می‌شه
+                wait_click_or_error(driver, '//*[@id="root"]/div[1]/div[3]/div[2]/button', "ersal1", card=True)
                 sleep(random_num_for_sleep)
+                check_page_errors(driver, card=True)
 
                 # ---------- مبلغ ----------
                 _notify(on_progress, "step", index, "ثبت مبلغ")
-                try:
-                    cash_pay_replay = WebDriverWait(driver, 30).until(
-                        EC.element_to_be_clickable((By.XPATH, '//*[@id="root"]/div[1]/div[3]/div/div[2]/div/input'))
-                    )
-                except Exception:
-                    raise
+                cash_pay_replay = WebDriverWait(driver, 30).until(
+                    EC.element_to_be_clickable((By.XPATH, '//*[@id="root"]/div[1]/div[3]/div/div[2]/div/input'))
+                )
                 cash_pay_replay.click()
-                set_react_input(driver, cash_pay_replay, cash_pay)
+                set_react_input(driver, cash_pay_replay, card_amount)
                 sleep(random_num_for_sleep)
 
                 # دکمه «ادامه» با متن پیدا می‌شه، نه با ترتیب div ها
-                wait_click(driver, CONTINUE_XPATH, "ersal2")
+                # سقف مبلغ: هنگام زدن دکمه ادامه/انتقال خطا میاد -> توقف کل عملیات
+                wait_click_or_error(driver, CONTINUE_XPATH, "ersal2", amount=True)
                 sleep(random_num_for_sleep)
+                check_page_errors(driver, amount=True)
 
                 try:
                     transfer_button = driver.find_element(
@@ -275,34 +534,19 @@ def run(data, user_name, pass_word, cash_pay, get_otp=None, on_progress=None, he
 
                 # ---------- چک موجودی ----------
                 _notify(on_progress, "step", index, "بررسی موجودی")
-                try:
-                    balance_element = WebDriverWait(driver, 30).until(
-                        EC.presence_of_element_located((By.XPATH, '//*[@id="root"]/div[1]/div[3]/div[1]/div[1]/div/div/section/div/div'))
-                    )
-
-                    balance_text = balance_element.text
-                    balance_text = balance_text.split(":", 1)[1].strip()
-
-                    persian_digits = "۰۱۲۳۴۵۶۷۸۹"
-                    english_digits = "0123456789"
-                    translation_table = str.maketrans(persian_digits, english_digits)
-
-                    balance_text = balance_text.translate(translation_table)
-                    balance_text = balance_text.replace("٬", "").replace(",", "").replace(" ", "")
-                    balance_text = balance_text.replace("ریال", "")
-
-                    balance_rial = int(balance_text)
-                    if balance_rial < cash_pay + 50000:
-                        # قبلاً اینجا finaly_cart_be_cart_text هنوز تعریف نشده بود (NameError)؛
-                        # حالا خطای مشخص می‌ده تا توی سایت نمایش داده بشه (مرورگر پایین بسته می‌شه)
-                        raise InsufficientBalance(balance_rial, cash_pay + 50000)
-
-                except Exception:
-                    # خطا در خوندن موجودی (فرق داره با موجودی ناکافی)
-                    raise
+                # موجودی باید خوانده و کافی بودنش تأیید شود؛ در غیر این صورت تا کلیک «تأیید نهایی» نمی‌رسیم
+                balance_ok = False
+                balance_rial = read_balance(driver)
+                needed = card_amount + MIN_BALANCE_BUFFER
+                if balance_rial < needed:
+                    raise InsufficientBalance(balance_rial, needed)
+                balance_ok = True
+                _notify(on_progress, "step", index, f"موجودی کافی است ({balance_rial:,} ریال)")
 
                 # ---------- تایید نهایی ----------
                 _notify(on_progress, "step", index, "تأیید نهایی انتقال")
+                if not balance_ok:  # محافظ نهایی: بدون تأیید موجودی هرگز پرداخت نمی‌شود
+                    raise BalanceUnreadable("balance was not verified before payment")
                 wait_click(driver, '//*[@id="root"]/div[1]/div[3]/div[2]/button', "move_pay")
                 sleep(random_num_for_sleep)
 
@@ -310,13 +554,51 @@ def run(data, user_name, pass_word, cash_pay, get_otp=None, on_progress=None, he
                     EC.presence_of_element_located((By.XPATH, '//*[@id="root"]/div[1]/div[3]/div[1]/div[1]/div[3]/span'))
                 )
                 finaly_cart_be_cart_text = finaly_cart_be_cart.text
-                result.append((finaly_cart_be_cart_text, name, cash_pay))
+                result.append((finaly_cart_be_cart_text, name, card_amount))
                 driver.quit()
                 _notify(on_progress, "card_done", index, finaly_cart_be_cart_text)
                 while_stop = False
 
+            except WrongOtp:
+                # کد اشتباه بود: مرورگر بسته می‌شه، به کاربر خبر می‌دیم و از اول وارد می‌شیم
+                driver.quit()
+                _notify(on_progress, "otp_wrong", index, "")
+                sleep(1)
+                # ادامهٔ while: مرورگر دوباره باز می‌شود و OTP تازه از کاربر خواسته می‌شود
+
+            except UnknownBluError:
+                driver.quit()
+                unknown_fails += 1
+                if not profile_reset:
+                    if unknown_fails >= TRIES_BEFORE_RESET:
+                        # ۳ بار با پروفایل فعلی شکست خورد: سشن را پاک کن و ۳ تلاش جدید شروع کن
+                        _notify(on_progress, "step", index,
+                                f"خطای ناشناخته از بلو ({TRIES_BEFORE_RESET} بار) — پاک کردن پروفایل کروم و ورود دوباره (OTP لازم است)")
+                        sleep(1)
+                        reset_profile()
+                        profile_reset = True
+                        unknown_fails = 0
+                    else:
+                        _notify(on_progress, "step", index,
+                                f"خطای ناشناخته از بلو — تلاش مجدد ({unknown_fails} از {TRIES_BEFORE_RESET})")
+                        sleep(1)
+                else:
+                    if unknown_fails >= TRIES_AFTER_RESET:
+                        raise  # بعد از پاک شدن پروفایل هم ۳ بار شکست خورد: کل عملیات متوقف
+                    _notify(on_progress, "step", index,
+                            f"خطای ناشناخته از بلو — تلاش مجدد بعد از پاک شدن پروفایل ({unknown_fails} از {TRIES_AFTER_RESET})")
+                    sleep(1)
+                # مرورگر دوباره از اول باز می‌شود (ادامهٔ while)
+
+            except InvalidCard:
+                # شماره کارت نادرست: همین کارت ناموفق ثبت می‌شه و میره سراغ کارت بعدی
+                driver.quit()
+                _notify(on_progress, "card_failed", index, "شماره کارت یا شبا نادرست است")
+                result.append((None, name, card_amount))
+                while_stop = False
+
             except Exception:
-                # فقط وقتی کل مرحله خطا بده؛ مرورگر بسته می‌شه و خطا نمایش داده می‌شه
+                # فقط وقتی کل مرحله خطا بده؛ مرورگر بسته می‌شود و خطا نمایش داده می‌شود
                 driver.quit()
                 raise
     return result

@@ -8,6 +8,10 @@ import os
 import re
 import sqlite3
 from contextlib import contextmanager
+from datetime import datetime, timedelta, timezone
+
+# ایران ساعت تابستانی ندارد؛ منطقهٔ زمانی ثابت ۳:۳۰+
+TEHRAN_TZ = timezone(timedelta(hours=3, minutes=30))
 
 CODE_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = os.path.dirname(CODE_DIR)
@@ -47,6 +51,19 @@ def init_db():
             )
         conn.execute(
             "CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)"
+        )
+        # سوابق تراکنش‌ها (موفق/ناموفق) با تاریخ شمسی
+        conn.execute(
+            """CREATE TABLE IF NOT EXISTS history (
+                id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                created_at REAL    NOT NULL,
+                jdate      TEXT    NOT NULL,
+                status     TEXT    NOT NULL,
+                number     TEXT    NOT NULL,
+                owner      TEXT    NOT NULL,
+                amount     INTEGER NOT NULL,
+                message    TEXT    NOT NULL DEFAULT ''
+            )"""
         )
 
 
@@ -113,7 +130,74 @@ def get_state():
         "username": get_setting("username"),
         "password": get_setting("password"),
         "nextId": int(get_setting("nextId", "1") or 1),
+        "showBrowser": get_setting("show_browser", "0") == "1",
     }
+
+
+# ---------- تاریخ شمسی ----------
+def gregorian_to_jalali(gy, gm, gd):
+    g_d_m = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334]
+    gy2 = gy + 1 if gm > 2 else gy
+    days = (355666 + (365 * gy) + ((gy2 + 3) // 4) - ((gy2 + 99) // 100)
+            + ((gy2 + 399) // 400) + gd + g_d_m[gm - 1])
+    jy = -1595 + 33 * (days // 12053)
+    days %= 12053
+    jy += 4 * (days // 1461)
+    days %= 1461
+    if days > 365:
+        jy += (days - 1) // 365
+        days = (days - 1) % 365
+    if days < 186:
+        jm = 1 + days // 31
+        jd = 1 + days % 31
+    else:
+        jm = 7 + (days - 186) // 30
+        jd = 1 + (days - 186) % 30
+    return jy, jm, jd
+
+
+def jalali_text(ts=None):
+    """زمان (epoch) را به رشتهٔ «۱۴۰۵/۰۷/۱۲ 16:12» به وقت تهران تبدیل می‌کند (ارقام لاتین)."""
+    dt = datetime.fromtimestamp(ts, TEHRAN_TZ) if ts is not None else datetime.now(TEHRAN_TZ)
+    jy, jm, jd = gregorian_to_jalali(dt.year, dt.month, dt.day)
+    return f"{jy:04d}/{jm:02d}/{jd:02d} {dt.hour:02d}:{dt.minute:02d}"
+
+
+# ---------- سوابق ----------
+def add_history(status, number, owner, amount, message=""):
+    """یک ردیف سابقه ذخیره می‌کند. status: success | failed"""
+    import time as _time
+    now = _time.time()
+    with connect() as conn:
+        conn.execute(
+            "INSERT INTO history (created_at, jdate, status, number, owner, amount, message) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (now, jalali_text(now), status, str(number), str(owner or PLACEHOLDER_OWNER),
+             int(amount or 0), str(message or "")),
+        )
+
+
+def get_history(limit=1000):
+    """جدیدترین‌ها اول."""
+    with connect() as conn:
+        rows = conn.execute(
+            "SELECT id, jdate, status, number, owner, amount, message "
+            "FROM history ORDER BY id DESC LIMIT ?",
+            (int(limit),),
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def delete_history(item_id):
+    """یک سابقه را با شناسه حذف می‌کند؛ تعداد ردیف حذف‌شده را برمی‌گرداند."""
+    with connect() as conn:
+        return conn.execute("DELETE FROM history WHERE id = ?", (int(item_id),)).rowcount
+
+
+def clear_history():
+    """همهٔ سوابق را پاک می‌کند؛ تعداد ردیف حذف‌شده را برمی‌گرداند."""
+    with connect() as conn:
+        return conn.execute("DELETE FROM history").rowcount
 
 
 # ---------- خروجی برای اسکریپت سلنیوم ----------
@@ -127,12 +211,18 @@ def is_real_card(number):
 
 
 def cards_to_run_data(cards):
-    """لیست دیکشنری کارت‌ها را به [(شماره کارت ۱۶ رقمی، نام مالک), ...] برای run() تبدیل می‌کند."""
-    return [
-        (_digits(c.get("number", "")), c.get("owner") or PLACEHOLDER_OWNER)
-        for c in cards
-        if is_real_card(c.get("number", ""))
-    ]
+    """لیست دیکشنری کارت‌ها را به [(شماره کارت ۱۶ رقمی، نام مالک[، مبلغ]), ...] برای run() تبدیل می‌کند.
+    اگر کارت کلید amount (مبلغ اختصاصی) داشته باشد، عضو سوم تاپل می‌شود."""
+    data = []
+    for c in cards:
+        if not is_real_card(c.get("number", "")):
+            continue
+        item = (_digits(c.get("number", "")), c.get("owner") or PLACEHOLDER_OWNER)
+        amount = _digits(c.get("amount", ""))
+        if amount and int(amount) > 0:
+            item += (int(amount),)
+        data.append(item)
+    return data
 
 
 def get_run_data():

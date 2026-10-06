@@ -8,7 +8,8 @@
     secondaryCards: 'haj_ashkan_secondary_cards',
     blueUsername: 'haj_ashkan_blue_username',
     bluePassword: 'haj_ashkan_blue_password',
-    nextId: 'haj_ashkan_next_id'
+    nextId: 'haj_ashkan_next_id',
+    showBrowser: 'haj_ashkan_show_browser'
   };
 
   function reportError(message) {
@@ -69,6 +70,9 @@
       realSet.call(localStorage, KEYS.blueUsername, username);
       realSet.call(localStorage, KEYS.bluePassword, password);
       realSet.call(localStorage, KEYS.nextId, String(next));
+      realSet.call(localStorage, KEYS.showBrowser, s.showBrowser ? '1' : '0');
+      // وضعیت آخرین اجرای کارت‌ها (فقط حافظهٔ سرور؛ بعد از شروع برنامه خالی است)
+      window.BLU_LAST_RUN = s.lastRun || {};
     }
   } catch (e) {
     console.error('could not load state from server', e);
@@ -86,6 +90,7 @@
       else if (key === KEYS.blueUsername) post('/api/setting', { key: 'username', value: value });
       else if (key === KEYS.bluePassword) post('/api/setting', { key: 'password', value: value });
       else if (key === KEYS.nextId) post('/api/setting', { key: 'nextId', value: value });
+      else if (key === KEYS.showBrowser) post('/api/setting', { key: 'show_browser', value: value === '1' ? '1' : '0' });
     } catch (e) {
       reportError('خطا در آماده‌سازی داده برای ذخیره');
     }

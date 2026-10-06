@@ -15,7 +15,7 @@ from selenium.common.exceptions import ElementClickInterceptedException
 
 # مسیرها نسبت به همین فایل هستند تا از هر جایی (مثلاً از app.py) درست کار کنند
 CODE_DIR = os.path.dirname(os.path.abspath(__file__))
-CHROME_PROFILE_DIR = os.path.join(CODE_DIR, "chrome-profile")  # سشن ورود بلو اینجا می‌ماند
+CHROME_PROFILE_DIR = os.getenv("CHROME_PROFILE_DIR", os.path.join(CODE_DIR, "chrome-profile"))  # سشن ورود بلو اینجا می‌ماند
 
 ROOT_DIR = os.path.dirname(CODE_DIR)
 

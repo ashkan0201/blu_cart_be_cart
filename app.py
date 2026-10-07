@@ -93,7 +93,11 @@ def api_history_delete():
 
 @app.post("/api/history/clear")
 def api_history_clear():
-    return jsonify(ok=True, deleted=db.clear_history())
+    deleted = db.clear_history()
+    # با پاک شدن سوابق، وضعیت ردیف‌های لیست فرعی هم به حالت پیش‌فرض برمی‌گردد
+    with JOBS_LOCK:
+        LAST_RUN.clear()
+    return jsonify(ok=True, deleted=deleted)
 
 
 @app.post("/api/primary")
@@ -112,8 +116,10 @@ def api_primary():
 def api_setting():
     data = request.get_json(silent=True) or {}
     key = data.get("key")
-    if key not in ("username", "password", "nextId", "show_browser"):
+    if key not in ("username", "password", "nextId", "show_browser", "transfer_method"):
         return jsonify(error="کلید نامعتبر"), 400
+    if key == "transfer_method" and db.normalize_method(data.get("value", "")) == "":
+        return jsonify(error="روش انتقال نامعتبر است"), 400
     db.set_setting(key, data.get("value", ""))
     return jsonify(ok=True)
 
@@ -131,6 +137,13 @@ _PERSIAN = "۰۱۲۳۴۵۶۷۸۹"
 _ARABIC = "٠١٢٣٤٥٦٧٨٩"
 _TO_EN = {ord(c): str(i) for i, c in enumerate(_PERSIAN)}
 _TO_EN.update({ord(c): str(i) for i, c in enumerate(_ARABIC)})
+
+
+METHOD_LABEL = {
+    "blu": "بلو به بلو",
+    "card": "کارت به کارت عادی",
+    "paya": "بین بانکی (پایا)",
+}
 
 
 def only_digits(value) -> str:
@@ -166,6 +179,8 @@ def friendly_error(e: Exception) -> str:
                     "(ممکن است ظاهر صفحهٔ بلو تغییر کرده باشد)؛ عملیات متوقف شد")
         if isinstance(e, blu.OtpTimeout):
             return "زمان وارد کردن کد تأیید (OTP) تمام شد؛ دوباره تلاش کنید"
+        if isinstance(e, blu.StoppedByUser):
+            return "عملیات و سشن‌ها توسط شما متوقف شد"
     if TimeoutException is not None and isinstance(e, TimeoutException):
         return ("یکی از بخش‌های صفحهٔ بلو در زمان مقرر باز نشد "
                 "(اینترنت کند، کد تأیید اشتباه، یا تغییر ظاهر سایت بلو)")
@@ -214,15 +229,19 @@ def record_result(item: dict, status: str, message: str = "", interrupted: bool 
         "message": message,
         "amount": item.get("amount") or 0,
         "interrupted": interrupted,
+        "remaining": bool(item.get("remaining")),
+        "method": item.get("method_used") or "",
     }
     if status in ("success", "failed"):
         try:
-            db.add_history(status, item["number"], item["owner"], item.get("amount") or 0, message)
+            db.add_history(status, item["number"], item["owner"], item.get("amount") or 0, message,
+                           item.get("method_used") or "")
         except Exception:
             app.logger.error("could not write history:\n%s", traceback.format_exc())
 
 
-def run_job(job_id: str, username: str, password: str, amount: int, headless=None):
+def run_job(job_id: str, username: str, password: str, amount: int, headless=None,
+            default_method: str = "card"):
     job = JOBS[job_id]
 
     def set_notice(kind, text):
@@ -231,6 +250,9 @@ def run_job(job_id: str, username: str, password: str, amount: int, headless=Non
         job["notice"] = {"seq": job["notice_seq"], "kind": kind, "text": text}
 
     def on_progress(event, index, detail=""):
+        # درخواست توقف: فقط در نقطه‌های امن (قبل از رویدادهای پایانی کارت) اجرا را قطع می‌کنیم
+        if job.get("stop") and event in ("card_start", "step", "method"):
+            raise blu.StoppedByUser("stopped by user")
         with JOBS_LOCK:
             item = job["results"][index]
             if event == "card_start":
@@ -244,6 +266,17 @@ def run_job(job_id: str, username: str, password: str, amount: int, headless=Non
                 job["otp_retry"] = True
                 set_notice("otp_wrong", "کد تأیید اشتباه بود! سشن از اول ری‌استارت می‌شود؛ منتظر کد جدید بلو باش و آن را دوباره وارد کن")
                 item["message"] = "کد تأیید اشتباه بود — ری‌استارت سشن"
+            elif event == "method":
+                # روشی که واقعاً برای این کارت به کار رفت (بلو به بلو همیشه اولویت دارد)
+                item["method_used"] = detail
+                label = METHOD_LABEL.get(detail, detail)
+                item["message"] = f"روش انتقال: {label}"
+                if detail == "blu" and item.get("method") != "blu":
+                    set_notice("method", f"کارت {item['number']}: حساب بلو بود؛ با «بلو به بلو» انجام می‌شود")
+                elif item.get("method") == "paya" and detail == "card":
+                    set_notice("method", f"کارت {item['number']}: پایا در دسترس نبود؛ با «کارت به کارت عادی» انجام می‌شود")
+                else:
+                    set_notice("method", f"کارت {item['number']}: روش «{label}»")
             elif event == "otp_ok":
                 job["otp_retry"] = False
                 set_notice("otp_ok", "کد تأیید درست بود ✓")
@@ -253,11 +286,22 @@ def run_job(job_id: str, username: str, password: str, amount: int, headless=Non
                 item["message"] = detail or "انتقال ناموفق بود"
                 job["fail_count"] += 1
                 record_result(item, "failed", item["message"])
+            elif event == "card_remaining":
+                # خود بلو انتقال را ناموفق اعلام کرد؛ کارت «باقی‌مانده» می‌ماند تا دوباره اجرا شود
+                item["status"] = "failed"
+                item["remaining"] = True
+                item["message"] = detail or "بلو انتقال را ناموفق اعلام کرد"
+                job["fail_count"] += 1
+                set_notice("otp_wrong", f"کارت {item['number']}: بلو انتقال را ناموفق اعلام کرد؛ این کارت باقی می‌ماند")
+                record_result(item, "failed", item["message"])
             elif event == "card_done":
                 item["status"] = "success"
                 item["message"] = f"انتقال انجام شد — {detail}" if detail else "انتقال با موفقیت انجام شد"
                 job["success_count"] += 1
                 record_result(item, "success", detail or "انتقال با موفقیت انجام شد")
+                label = METHOD_LABEL.get(item.get("method_used"), "")
+                if label:
+                    set_notice("otp_ok", f"کارت {item['number']} با روش «{label}» انجام شد ✓")
 
     def get_otp() -> str:
         # بلو کد خواسته؛ وضعیت را need_otp می‌کنیم تا صفحه مودال OTP را نشان بدهد
@@ -272,6 +316,11 @@ def run_job(job_id: str, username: str, password: str, amount: int, headless=Non
                 else "کد تأیید (OTP) ارسال‌شده از طرف بلو را وارد کنید"
             )
         got = job["otp_event"].wait(OTP_TIMEOUT)
+        if job.get("stop"):
+            with JOBS_LOCK:
+                job["need_otp"] = False
+                job["otp_message"] = ""
+            raise blu.StoppedByUser("stopped by user")
         with JOBS_LOCK:
             value = job["otp_value"]
             job["otp_value"] = None
@@ -286,11 +335,12 @@ def run_job(job_id: str, username: str, password: str, amount: int, headless=Non
         with JOBS_LOCK:
             job["status"] = "running"
             data = db.cards_to_run_data(
-                [{"number": r["number"], "owner": r["owner"], "amount": r["amount"]}
+                [{"number": r["number"], "owner": r["owner"], "amount": r["amount"],
+                  "method": r.get("method") or default_method}
                  for r in job["results"]]
             )
         blu.run(data, username, password, amount, get_otp=get_otp,
-                on_progress=on_progress, headless=headless)
+                on_progress=on_progress, headless=headless, default_method=default_method)
         with JOBS_LOCK:
             job["status"] = "completed"
             job["current_card"] = None
@@ -341,6 +391,9 @@ def api_start_transfer():
     amount_text = only_digits(data.get("amount"))
     amount = int(amount_text) if amount_text else 0
 
+    # روش پیش‌فرض: از درخواست، وگرنه از تنظیمات (card | paya)
+    default_method = db.normalize_method(data.get("method")) or db.get_transfer_method()
+
     results = []
     for i, c in enumerate(cards):
         if not isinstance(c, dict) or not db.is_real_card(c.get("number", "")):
@@ -358,6 +411,9 @@ def api_start_transfer():
             "number": format_card(c.get("number", "")),
             "owner": c.get("owner") or db.PLACEHOLDER_OWNER,
             "amount": card_amount,
+            "method": db.normalize_method(c.get("method")) or default_method,
+            "method_used": "",
+            "remaining": False,
             "status": "pending",
             "message": "",
         })
@@ -383,6 +439,7 @@ def api_start_transfer():
             "otp_event": threading.Event(),
             "otp_value": None,
             "otp_retry": False,   # کد قبلی اشتباه بود و سشن ری‌استارت شده
+            "stop": False,        # کاربر دکمهٔ توقف را زده
             "notice": None,       # پیام لحظه‌ای برای نمایش در سایت: {seq, kind, text}
             "notice_seq": 0,
             "current_index": 0,
@@ -405,10 +462,24 @@ def api_start_transfer():
     headless = None if show_setting == "" else (show_setting != "1")
 
     threading.Thread(
-        target=run_job, args=(job_id, username, password, amount, headless), daemon=True
+        target=run_job, args=(job_id, username, password, amount, headless, default_method), daemon=True
     ).start()
 
     return jsonify({"job_id": job_id, "status": "pending", "total": len(results)})
+
+
+@app.post("/api/transfer/stop/<job_id>")
+def api_transfer_stop(job_id: str):
+    """متوقف کردن کار در حال اجرا: مرورگر/سشن بسته می‌شود و کارت‌های اجرانشده «مانده» علامت می‌خورند."""
+    with JOBS_LOCK:
+        job = JOBS.get(job_id)
+        if not job:
+            return jsonify(error="کار پیدا نشد"), 404
+        if _is_finished(job):
+            return jsonify(ok=True, already_finished=True)
+        job["stop"] = True
+        job["otp_event"].set()  # اگر منتظر OTP است بیدار شود
+    return jsonify(ok=True)
 
 
 @app.get("/api/transfer/status/<job_id>")

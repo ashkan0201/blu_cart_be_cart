@@ -65,6 +65,10 @@ def init_db():
                 message    TEXT    NOT NULL DEFAULT ''
             )"""
         )
+        # ستون روش انتقال (blu | card | paya) برای دیتابیس‌های قدیمی اضافه می‌شود
+        cols = [r["name"] for r in conn.execute("PRAGMA table_info(history)").fetchall()]
+        if "method" not in cols:
+            conn.execute("ALTER TABLE history ADD COLUMN method TEXT NOT NULL DEFAULT ''")
 
 
 # ---------- کارت‌ها ----------
@@ -131,7 +135,23 @@ def get_state():
         "password": get_setting("password"),
         "nextId": int(get_setting("nextId", "1") or 1),
         "showBrowser": get_setting("show_browser", "0") == "1",
+        "transferMethod": get_transfer_method(),
     }
+
+
+# ---------- روش انتقال ----------
+TRANSFER_METHODS = ("card", "paya")  # card = کارت به کارت عادی، paya = بین بانکی (پایا)
+DEFAULT_TRANSFER_METHOD = "card"
+
+
+def normalize_method(value, default=""):
+    value = str(value or "").strip().lower()
+    return value if value in TRANSFER_METHODS else default
+
+
+def get_transfer_method():
+    """روش پیش‌فرض انتقال که در تنظیمات انتخاب شده (card | paya)."""
+    return normalize_method(get_setting("transfer_method", ""), DEFAULT_TRANSFER_METHOD)
 
 
 # ---------- تاریخ شمسی ----------
@@ -164,16 +184,16 @@ def jalali_text(ts=None):
 
 
 # ---------- سوابق ----------
-def add_history(status, number, owner, amount, message=""):
-    """یک ردیف سابقه ذخیره می‌کند. status: success | failed"""
+def add_history(status, number, owner, amount, message="", method=""):
+    """یک ردیف سابقه ذخیره می‌کند. status: success | failed ؛ method: blu | card | paya"""
     import time as _time
     now = _time.time()
     with connect() as conn:
         conn.execute(
-            "INSERT INTO history (created_at, jdate, status, number, owner, amount, message) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO history (created_at, jdate, status, number, owner, amount, message, method) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
             (now, jalali_text(now), status, str(number), str(owner or PLACEHOLDER_OWNER),
-             int(amount or 0), str(message or "")),
+             int(amount or 0), str(message or ""), str(method or "")),
         )
 
 
@@ -181,7 +201,7 @@ def get_history(limit=1000):
     """جدیدترین‌ها اول."""
     with connect() as conn:
         rows = conn.execute(
-            "SELECT id, jdate, status, number, owner, amount, message "
+            "SELECT id, jdate, status, number, owner, amount, message, method "
             "FROM history ORDER BY id DESC LIMIT ?",
             (int(limit),),
         ).fetchall()
@@ -211,17 +231,19 @@ def is_real_card(number):
 
 
 def cards_to_run_data(cards):
-    """لیست دیکشنری کارت‌ها را به [(شماره کارت ۱۶ رقمی، نام مالک[، مبلغ]), ...] برای run() تبدیل می‌کند.
-    اگر کارت کلید amount (مبلغ اختصاصی) داشته باشد، عضو سوم تاپل می‌شود."""
+    """لیست دیکشنری کارت‌ها را به [(شماره کارت ۱۶ رقمی، نام مالک، مبلغ یا 0، روش یا ""), ...] برای run() تبدیل می‌کند.
+    مبلغ 0 یعنی مبلغ پیش‌فرض؛ روش خالی یعنی روش پیش‌فرض تنظیمات."""
     data = []
     for c in cards:
         if not is_real_card(c.get("number", "")):
             continue
-        item = (_digits(c.get("number", "")), c.get("owner") or PLACEHOLDER_OWNER)
         amount = _digits(c.get("amount", ""))
-        if amount and int(amount) > 0:
-            item += (int(amount),)
-        data.append(item)
+        data.append((
+            _digits(c.get("number", "")),
+            c.get("owner") or PLACEHOLDER_OWNER,
+            int(amount) if amount and int(amount) > 0 else 0,
+            normalize_method(c.get("method", "")),
+        ))
     return data
 
 

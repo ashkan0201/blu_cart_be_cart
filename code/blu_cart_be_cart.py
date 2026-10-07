@@ -108,6 +108,43 @@ class BalanceUnreadable(Exception):
     """موجودی از صفحهٔ بلو خوانده نشد؛ برای احتیاط هیچ واریزی انجام نمی‌شود و کل عملیات متوقف می‌شود."""
 
 
+class StoppedByUser(Exception):
+    """کاربر از صفحهٔ انتقال دکمهٔ توقف را زد؛ مرورگر بسته می‌شود و کل عملیات متوقف می‌شود (بدون ۳ به ۳)."""
+
+
+class BankTransferFailed(Exception):
+    """بلو در صفحهٔ نهایی «انتقال ناموفق» را نشان داد (مثلاً تداخل بانکی)؛ کارت «باقی‌مانده» می‌ماند
+    و دوباره تلاش نمی‌شود. بقیهٔ کارت‌ها ادامه پیدا می‌کنند."""
+
+
+# خطاهایی که قبلاً جداگانه هندل شده‌اند و مشمول «۳ به ۳» نیستند
+NO_RETRY_ERRORS = (InsufficientBalance, AmountLimitExceeded, InvalidInfo, BalanceUnreadable, OtpTimeout)
+
+# روش‌های انتقال
+METHOD_BLU = "blu"    # بلو به بلو (همیشه اولویت اول، اگر دکمه‌اش باز باشد)
+METHOD_CARD = "card"  # کارت به کارت عادی
+METHOD_PAYA = "paya"  # بین بانکی (پایا)
+
+BLU_TO_BLU_XPATH = '//*[@id="root"]/div[1]/div[3]/div/div/div[1]/button[5]'
+CARD_TO_CARD_XPATH = '//*[@id="root"]/div[1]/div[3]/div/div/div[1]/button[1]'
+# فقط «پایا»؛ دکمهٔ «بین بانکی (پل)» هم عنوان مشابه دارد و نباید انتخاب شود (یای عربی/فارسی یکی گرفته می‌شود)
+PAYA_BUTTON_XPATH = (
+    '//button[.//h4[contains(translate(normalize-space(), "ي", "ی"), "پایا")]]'
+    '[not(.//h4[contains(normalize-space(), "پل")])]'
+)
+REASON_INPUT_XPATH = ('//div[@data-input-row="true"][.//h5[normalize-space()="بابت"]]'
+                      '//div[@data-input-container="true"]')
+# فقط داخل پنجرهٔ «علت انتقال» (bottom sheet) دنبال «مدیریت نقدینگی» می‌گردیم؛ متن می‌تواند «نقدینگی» یا «مدیریت نقدینگی» باشد
+REASON_LIQUIDITY_XPATH = ('//div[@data-rsbs-overlay="true"]'
+                          '//span[contains(normalize-space(), "نقدینگی")]')
+# تلاش دوم اگر «نقدینگی» در لیست نبود
+REASON_DAILY_XPATH = ('//div[@data-rsbs-overlay="true"]'
+                      '//span[contains(normalize-space(), "امور روزمره")]')
+PAYA_CONFIRM_XPATH = '//button[.//span[normalize-space()="تایید و انتقال"]]'
+STATUS_SUCCESS_XPATH = '//span[normalize-space()="انتقال موفق"]'
+STATUS_FAILED_XPATH = '//span[contains(normalize-space(), "انتقال ناموفق")]'
+LEGACY_STATUS_XPATH = '//*[@id="root"]/div[1]/div[3]/div[1]/div[1]/div[3]/span'
+
 MIN_BALANCE_BUFFER = 50000  # ریال: بعد از انتقال باید حداقل این مقدار (کارمزد و احتیاط) در حساب بماند
 
 # خطای ناشناخته‌ی بلو موقع ورود: ابتدا چند بار با همان پروفایل، بعد پاک کردن پروفایل و چند بار دیگر
@@ -257,6 +294,134 @@ def wait_click_or_error(driver, xpath, tag, timeout=30, **checks):
     return wait_click(driver, xpath, tag, timeout)
 
 
+def _any_visible(driver, xpath):
+    try:
+        for el in driver.find_elements(By.XPATH, xpath):
+            if el.is_displayed():
+                return el
+    except Exception as e:
+        print("[visible-check] failed:", type(e).__name__, str(e)[:120])
+    return None
+
+
+def choose_transfer_method(driver, wanted, pause=1.0):
+    """روش انتقال را در صفحه انتخاب می‌کند و روش واقعی (blu | card | paya) را برمی‌گرداند.
+    اولویت: ۱) بلو به بلو اگر دکمه‌اش باز بود (هر روشی که کاربر زده باشد)،
+            ۲) روش انتخاب‌شدهٔ کاربر (پایا؛ اگر پایا باز نبود کارت به کارت عادی)،
+            ۳) کارت به کارت عادی."""
+    # صبر کن گزینه‌ها بالا بیایند تا بلو به بلو به‌خاطر دیر رسیدن صفحه نادیده گرفته نشود
+    try:
+        WebDriverWait(driver, 15).until(
+            EC.presence_of_element_located((By.XPATH, CARD_TO_CARD_XPATH))
+        )
+    except Exception:
+        pass
+
+    try:
+        blu_button = driver.find_element(By.XPATH, BLU_TO_BLU_XPATH)
+        if "disabled" in (blu_button.get_attribute("class") or "").lower():
+            raise Exception("Button is disabled")
+        blu_button.click()
+        return METHOD_BLU
+    except Exception:
+        pass
+
+    if wanted == METHOD_PAYA:
+        try:
+            paya_button = WebDriverWait(driver, 5).until(
+                EC.element_to_be_clickable((By.XPATH, PAYA_BUTTON_XPATH))
+            )
+            if "disabled" in (paya_button.get_attribute("class") or "").lower():
+                raise Exception("paya disabled")
+            paya_button.click()
+            return METHOD_PAYA
+        except Exception:
+            print("[method] paya not available, falling back to normal card-to-card")
+
+    wait_click(driver, CARD_TO_CARD_XPATH, "blu_to_other")
+    sleep(pause)
+    return METHOD_CARD
+
+
+def _pick_reason_option(driver, xpath, label, pause):
+    """یک گزینه را در پنجرهٔ «علت انتقال» پیدا و انتخاب می‌کند؛ اگر نبود False برمی‌گرداند."""
+    try:
+        option = WebDriverWait(driver, 5).until(
+            EC.presence_of_element_located((By.XPATH, xpath))
+        )
+    except Exception:
+        print(f"[paya] reason option not present: {label}")
+        return False
+    # لیست داخل پنجرهٔ اسکرول‌دار است؛ گزینه را به دید بیاور
+    driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", option)
+    sleep(0.3)
+    try:
+        option.click()
+    except Exception:
+        driver.execute_script("arguments[0].click();", option)
+    sleep(pause)
+    print(f"[paya] reason selected: {label}")
+    return True
+
+
+def select_paya_reason(driver, pause=1.0):
+    """در فلوی پایا: «بابت» را باز می‌کند و «مدیریت نقدینگی» را انتخاب می‌کند؛
+    اگر نقدینگی در لیست نبود، تلاش دوم: «هزینه عمومی و امور روزمره».
+    خود بخش بابت هم ممکن است در صفحه باشد یا نباشد؛ اگر نبود بدون خطا رد می‌شود
+    (اگر واقعاً الزامی باشد، دکمهٔ تایید فعال نمی‌شود و همان ۳ به ۳ اجرا می‌شود)."""
+    try:
+        reason = WebDriverWait(driver, 5).until(
+            EC.element_to_be_clickable((By.XPATH, REASON_INPUT_XPATH))
+        )
+    except Exception:
+        print("[paya] reason field not present, skipping")
+        return False
+    try:
+        reason.click()
+    except Exception:
+        driver.execute_script("arguments[0].click();", reason)
+    sleep(pause)
+    if _pick_reason_option(driver, REASON_LIQUIDITY_XPATH, "نقدینگی", pause):
+        return True
+    return _pick_reason_option(driver, REASON_DAILY_XPATH, "هزینه عمومی و امور روزمره", pause)
+
+
+def wait_final_status(driver, used_method, timeout=30):
+    """منتظر وضعیت نهایی می‌ماند: ("success", متن) یا ("failed", متن).
+    اگر تا timeout هیچ وضعیتی پیدا نشد TimeoutException می‌دهد (انتقال انجام‌نشده حساب می‌شود)."""
+    holder = {}
+
+    def cond(d):
+        el = _any_visible(d, STATUS_FAILED_XPATH)
+        if el is not None:
+            holder["r"] = ("failed", el.text.strip() or "انتقال ناموفق")
+            return True
+        el = _any_visible(d, STATUS_SUCCESS_XPATH)
+        if el is not None:
+            holder["r"] = ("success", el.text.strip() or "انتقال موفق")
+            return True
+        if used_method != METHOD_PAYA:  # فلوهای قبلی: المنت وضعیت قدیمی
+            try:
+                for e in d.find_elements(By.XPATH, LEGACY_STATUS_XPATH):
+                    holder["r"] = ("success", e.text.strip() or "انتقال موفق")
+                    return True
+            except Exception:
+                pass
+        return False
+
+    WebDriverWait(driver, timeout, poll_frequency=0.3).until(cond)
+    return holder["r"]
+
+
+def _safe_quit(driver):
+    if driver is None:
+        return
+    try:
+        driver.quit()
+    except Exception:
+        pass
+
+
 def _notify(on_progress, event, index, detail=""):
     """گزارش پیشرفت به بیرون (app.py). اگه callback نباشه کاری نمی‌کنه."""
     if on_progress:
@@ -360,13 +525,16 @@ def read_balance(driver, timeout=30):
     return holder["value"]
 
 
-def run(data, user_name, pass_word, cash_pay, get_otp=None, on_progress=None, headless=None):
+def run(data, user_name, pass_word, cash_pay, get_otp=None, on_progress=None, headless=None,
+        default_method=METHOD_CARD):
     """
-    data:          [(شماره کارت، نام مالک)] یا [(شماره کارت، نام مالک، مبلغ اختصاصی)]
-                   اگه مبلغ اختصاصی نباشه، cash_pay (مبلغ پیش‌فرض) واریز می‌شه.
+    data:          [(شماره کارت، نام مالک[، مبلغ اختصاصی[، روش]])]؛ روش: "card" یا "paya" (خالی = default_method).
+                   اگه مبلغ اختصاصی نباشه (یا 0)، cash_pay (مبلغ پیش‌فرض) واریز می‌شه.
+                   بلو به بلو همیشه اولویت دارد؛ روش انتخابی فقط وقتی به کار می‌رود که بلو به بلو ممکن نباشد.
     get_otp():     وقتی بلو کد تأیید خواست صدا زده می‌شه و باید رشته‌ی OTP رو برگردونه
                    (اگه None باشه از ترمینال input می‌گیره).
-    on_progress(event, index, detail): event یکی از card_start | step | card_done | card_failed | otp_ok | otp_wrong
+    on_progress(event, index, detail): event یکی از card_start | step | method | card_done | card_failed |
+                   card_remaining (بلو انتقال را ناموفق اعلام کرد) | otp_ok | otp_wrong
     headless:      None یعنی از HEADLESS بالای فایل استفاده کن.
     """
     if headless is None:
@@ -376,6 +544,8 @@ def run(data, user_name, pass_word, cash_pay, get_otp=None, on_progress=None, he
     for index, item in enumerate(data):
         shomareh_cart, name = item[0], item[1]
         card_amount = int(item[2]) if len(item) > 2 and item[2] else default_amount
+        card_method = (item[3] if len(item) > 3 and item[3] in (METHOD_CARD, METHOD_PAYA)
+                       else (default_method if default_method in (METHOD_CARD, METHOD_PAYA) else METHOD_CARD))
         if card_amount <= 0:
             raise ValueError(f"مبلغ کارت شمارهٔ {index + 1} مشخص نیست")
         _notify(on_progress, "card_start", index)
@@ -399,13 +569,14 @@ def run(data, user_name, pass_word, cash_pay, get_otp=None, on_progress=None, he
             driver_path = find_driver()
             print("DRIVER:", driver_path or "auto (Selenium Manager)")
             service = Service(driver_path) if driver_path else Service()
-            driver = webdriver.Chrome(service=service, options=options)
-            sleep(random_num_for_sleep)
-
-            print("TITLE:", driver.title)
-            print("URL:", driver.current_url)
-
+            driver = None
             try:
+                driver = webdriver.Chrome(service=service, options=options)
+                sleep(random_num_for_sleep)
+
+                print("TITLE:", driver.title)
+                print("URL:", driver.current_url)
+
                 # ---------- ورود ----------
                 _notify(on_progress, "step", index, "ورود به بلو")
                 try:
@@ -515,22 +686,12 @@ def run(data, user_name, pass_word, cash_pay, get_otp=None, on_progress=None, he
                 sleep(random_num_for_sleep)
                 check_page_errors(driver, amount=True)
 
-                try:
-                    transfer_button = driver.find_element(
-                        By.XPATH,
-                        '//*[@id="root"]/div[1]/div[3]/div/div/div[1]/button[5]'
-                    )
-
-                    classes = transfer_button.get_attribute("class")
-
-                    if "disabled" in classes.lower():
-                        raise Exception("Button is disabled")
-
-                    transfer_button.click()
-
-                except Exception:
-                    wait_click(driver, '//*[@id="root"]/div[1]/div[3]/div/div/div[1]/button[1]', "blu_to_other")
-                    sleep(random_num_for_sleep)
+                # ---------- انتخاب روش انتقال ----------
+                # اولویت: بلو به بلو (اگر باز بود) ← روش انتخابی کاربر (پایا / کارت به کارت)
+                used_method = choose_transfer_method(driver, card_method, random_num_for_sleep)
+                print("[method] wanted:", card_method, "used:", used_method)
+                _notify(on_progress, "method", index, used_method)
+                sleep(random_num_for_sleep)
 
                 # ---------- چک موجودی ----------
                 _notify(on_progress, "step", index, "بررسی موجودی")
@@ -543,64 +704,91 @@ def run(data, user_name, pass_word, cash_pay, get_otp=None, on_progress=None, he
                 balance_ok = True
                 _notify(on_progress, "step", index, f"موجودی کافی است ({balance_rial:,} ریال)")
 
+                if used_method == METHOD_PAYA:
+                    _notify(on_progress, "step", index, "انتخاب بابت: نقدینگی")
+                    select_paya_reason(driver, random_num_for_sleep)
+
                 # ---------- تایید نهایی ----------
                 _notify(on_progress, "step", index, "تأیید نهایی انتقال")
                 if not balance_ok:  # محافظ نهایی: بدون تأیید موجودی هرگز پرداخت نمی‌شود
                     raise BalanceUnreadable("balance was not verified before payment")
-                wait_click(driver, '//*[@id="root"]/div[1]/div[3]/div[2]/button', "move_pay")
+                if used_method == METHOD_PAYA:
+                    wait_click(driver, PAYA_CONFIRM_XPATH, "paya_pay")
+                else:
+                    wait_click(driver, '//*[@id="root"]/div[1]/div[3]/div[2]/button', "move_pay")
                 sleep(random_num_for_sleep)
 
-                finaly_cart_be_cart = WebDriverWait(driver, 30).until(
-                    EC.presence_of_element_located((By.XPATH, '//*[@id="root"]/div[1]/div[3]/div[1]/div[1]/div[3]/span'))
-                )
-                finaly_cart_be_cart_text = finaly_cart_be_cart.text
-                result.append((finaly_cart_be_cart_text, name, card_amount))
+                # وضعیت نهایی: موفق ← کارت تمام است | ناموفق (خود بلو) ← کارت باقی می‌ماند
+                # | وضعیتی پیدا نشد ← انتقال انجام‌نشده حساب می‌شود و «۳ به ۳» اجرا می‌شود
+                final_state, final_text = wait_final_status(driver, used_method)
+                if final_state == "failed":
+                    raise BankTransferFailed(final_text)
+                result.append((final_text, name, card_amount))
                 driver.quit()
-                _notify(on_progress, "card_done", index, finaly_cart_be_cart_text)
+                _notify(on_progress, "card_done", index, final_text)
                 while_stop = False
+
+            except StoppedByUser:
+                # دکمهٔ توقف: مرورگر بسته می‌شود و کل عملیات بدون ۳ به ۳ متوقف می‌شود
+                _safe_quit(driver)
+                raise
 
             except WrongOtp:
                 # کد اشتباه بود: مرورگر بسته می‌شه، به کاربر خبر می‌دیم و از اول وارد می‌شیم
-                driver.quit()
+                _safe_quit(driver)
                 _notify(on_progress, "otp_wrong", index, "")
                 sleep(1)
                 # ادامهٔ while: مرورگر دوباره باز می‌شود و OTP تازه از کاربر خواسته می‌شود
 
-            except UnknownBluError:
-                driver.quit()
+            except InvalidCard:
+                # شماره کارت نادرست: همین کارت ناموفق ثبت می‌شه و میره سراغ کارت بعدی
+                _safe_quit(driver)
+                _notify(on_progress, "card_failed", index, "شماره کارت یا شبا نادرست است")
+                result.append((None, name, card_amount))
+                while_stop = False
+
+            except BankTransferFailed as e:
+                # خود بلو «انتقال ناموفق» را برگرداند: دوباره تلاش نمی‌شود؛ کارت «باقی‌مانده» علامت می‌خورد
+                _safe_quit(driver)
+                _notify(on_progress, "card_remaining", index,
+                        "بلو انتقال را ناموفق اعلام کرد (ممکن است تداخل بانکی باشد)؛ کارت باقی ماند")
+                result.append((None, name, card_amount))
+                while_stop = False
+
+            except NO_RETRY_ERRORS:
+                # موجودی/سقف مبلغ/اطلاعات نادرست/خواندن موجودی/تایم‌اوت OTP: همان رفتار قبلی، کل عملیات متوقف
+                _safe_quit(driver)
+                raise
+
+            except Exception as e:
+                # «خطای ناشناخته‌ی بلو» و هر خطای هندل‌نشدهٔ دیگر: روش ۳ به ۳
+                #   ۳ بار ری‌استارت سشن ← پاک شدن پروفایل ← ۳ بار دیگر ← توقف کامل
+                _safe_quit(driver)
                 unknown_fails += 1
+                if isinstance(e, UnknownBluError):
+                    what = "خطای ناشناخته از بلو"
+                else:
+                    what = f"خطای پیش‌بینی‌نشده ({type(e).__name__})"
+                    print("[retry] unhandled error:", type(e).__name__, str(e)[:200])
                 if not profile_reset:
                     if unknown_fails >= TRIES_BEFORE_RESET:
-                        # ۳ بار با پروفایل فعلی شکست خورد: سشن را پاک کن و ۳ تلاش جدید شروع کن
                         _notify(on_progress, "step", index,
-                                f"خطای ناشناخته از بلو ({TRIES_BEFORE_RESET} بار) — پاک کردن پروفایل کروم و ورود دوباره (OTP لازم است)")
+                                f"{what} ({TRIES_BEFORE_RESET} بار) — پاک کردن پروفایل کروم و ورود دوباره (OTP لازم است)")
                         sleep(1)
                         reset_profile()
                         profile_reset = True
                         unknown_fails = 0
                     else:
                         _notify(on_progress, "step", index,
-                                f"خطای ناشناخته از بلو — تلاش مجدد ({unknown_fails} از {TRIES_BEFORE_RESET})")
+                                f"{what} — ری‌استارت سشن ({unknown_fails} از {TRIES_BEFORE_RESET})")
                         sleep(1)
                 else:
                     if unknown_fails >= TRIES_AFTER_RESET:
                         raise  # بعد از پاک شدن پروفایل هم ۳ بار شکست خورد: کل عملیات متوقف
                     _notify(on_progress, "step", index,
-                            f"خطای ناشناخته از بلو — تلاش مجدد بعد از پاک شدن پروفایل ({unknown_fails} از {TRIES_AFTER_RESET})")
+                            f"{what} — ری‌استارت سشن بعد از پاک شدن پروفایل ({unknown_fails} از {TRIES_AFTER_RESET})")
                     sleep(1)
                 # مرورگر دوباره از اول باز می‌شود (ادامهٔ while)
-
-            except InvalidCard:
-                # شماره کارت نادرست: همین کارت ناموفق ثبت می‌شه و میره سراغ کارت بعدی
-                driver.quit()
-                _notify(on_progress, "card_failed", index, "شماره کارت یا شبا نادرست است")
-                result.append((None, name, card_amount))
-                while_stop = False
-
-            except Exception:
-                # فقط وقتی کل مرحله خطا بده؛ مرورگر بسته می‌شود و خطا نمایش داده می‌شود
-                driver.quit()
-                raise
     return result
 
 

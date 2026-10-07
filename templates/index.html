@@ -1029,6 +1029,32 @@
     }
     .transfer-total b { font-variant-numeric: tabular-nums; }
 
+    /* ========== روش انتقال ========== */
+    .method-options { display: flex; flex-direction: column; gap: 0.6rem; margin-top: 0.4rem; }
+    .method-opt {
+      display: flex; align-items: center; gap: 0.7rem; padding: 0.75rem 0.9rem; cursor: pointer;
+      border-radius: 14px; border: 1px solid rgba(168, 85, 247, 0.3); background: rgba(168, 85, 247, 0.08);
+      transition: all 0.25s ease; direction: rtl; text-align: right;
+    }
+    .method-opt input { accent-color: var(--accent); width: 18px; height: 18px; flex-shrink: 0; }
+    .method-opt span { display: flex; flex-direction: column; gap: 0.15rem; font-size: 0.9rem; }
+    .method-opt small { color: var(--text-muted); font-size: 0.74rem; line-height: 1.6; }
+    .method-opt:has(input:checked) { border-color: var(--accent); background: rgba(168, 85, 247, 0.22); }
+    .method-seg { display: flex; gap: 0.5rem; margin-top: 0.4rem; }
+    .method-seg button {
+      flex: 1; padding: 0.55rem 0.4rem; font-family: inherit; font-size: 0.82rem; font-weight: 500; cursor: pointer;
+      border-radius: 12px; border: 1px solid rgba(168, 85, 247, 0.3);
+      background: rgba(168, 85, 247, 0.08); color: var(--text-muted); transition: all 0.25s ease;
+    }
+    .method-seg button.active { background: linear-gradient(135deg, var(--accent), var(--accent-dark)); color: #fff; border-color: transparent; }
+    .amount-chip.method { background: rgba(59, 130, 246, 0.18); color: #93c5fd; }
+    .transfer-notice.method {
+      background: rgba(59, 130, 246, 0.14); border: 1px solid rgba(59, 130, 246, 0.5);
+      color: #bfdbfe; box-shadow: 0 0 18px rgba(59, 130, 246, 0.2);
+    }
+    .transfer-notice.method .notice-icon { background: linear-gradient(135deg, #3b82f6, #1d4ed8); }
+    .method-modal-btns { display: flex; flex-direction: column; gap: 0.5rem; width: 100%; }
+
     /* سوابق */
     .history-tabs { display: flex; gap: 0.5rem; margin-bottom: 0.75rem; flex-shrink: 0; }
     .tab-btn {
@@ -1154,6 +1180,7 @@
         </div>
         <div class="amount-hint" id="amount-hint">کارت‌های دارای مبلغ اختصاصی، مبلغ خودشان را می‌گیرند</div>
         <div class="amount-hint">حداقل مبلغ هر انتقال ۱۰۰ تومان (۱,۰۰۰ ریال) و حداکثر ۳ میلیارد تومان است</div>
+
       </div>
 
       <button class="transfer-all-btn" id="transfer-btn">
@@ -1214,6 +1241,27 @@
           </label>
         </div>
 
+        <!-- روش کارت‌به‌کارت -->
+        <div class="glass-card">
+          <div class="section-header">
+            <div class="section-header-right">
+              <div class="icon">🏦</div>
+              <span>روش کارت‌به‌کارت</span>
+            </div>
+          </div>
+          <div class="method-options" id="settings-method-options">
+            <label class="method-opt">
+              <input type="radio" name="transfer-method" value="card">
+              <span><b>کارت به کارت عادی</b><small>کارمزد: ۱۱٬۰۰۰ ریال</small></span>
+            </label>
+            <label class="method-opt">
+              <input type="radio" name="transfer-method" value="paya">
+              <span><b>بین بانکی (پایا)</b><small>کارمزد: ۴٬۰۰۰ ریال</small></span>
+            </label>
+          </div>
+          <div class="amount-hint" style="margin-top: 0.7rem;">اگر دکمهٔ «بلو به بلو» برای حساب مقصد باز باشد (مثلاً حساب شخصی سامان)، همیشه همان استفاده می‌شود، هر روشی که انتخاب کرده باشید. در غیر این صورت روش انتخابی شما اجرا می‌شود. با دکمهٔ «ذخیره» پایین صفحه اعمال می‌شود.</div>
+        </div>
+
         <!-- لیست اصلی کارت‌ها -->
         <div class="glass-card cards-panel" style="min-height: 280px;">
           <div class="section-header">
@@ -1263,7 +1311,7 @@
         <div class="section-header">
           <div class="section-header-right">
             <div class="icon">📜</div>
-            <span>تراکنش‌ها (جدیدترین اول)</span>
+            <span>تراکنش‌ها</span>
           </div>
           <span class="card-count" id="history-count">۰ مورد</span>
         </div>
@@ -1335,6 +1383,7 @@
       </div>
 
       <div class="transfer-footer-btns">
+        <button class="btn btn-danger" id="transfer-stop-btn" style="display: none; width: 100%; padding: 0.9rem;">⏹ توقف انتقال و بستن سشن‌ها</button>
         <button class="btn btn-primary" id="transfer-done-btn" style="display: none;">بازگشت به صفحه اصلی</button>
       </div>
     </div>
@@ -1415,6 +1464,21 @@
   </div>
 
   <!-- Amount Modal (مبلغ اختصاصی یک حساب) -->
+  <div class="modal-overlay" id="method-modal">
+    <div class="modal">
+      <div class="modal-icon" style="background: linear-gradient(135deg, #3b82f6, #1d4ed8);">🏦</div>
+      <h3>روش انتقال این حساب</h3>
+      <p id="method-modal-card" style="margin-bottom: 0.5rem; direction: ltr; font-size: 0.85rem;"></p>
+      <p style="font-size: 0.82rem; margin-bottom: 1rem;">اگر دکمهٔ «بلو به بلو» برای این حساب باز باشد، همیشه همان اولویت دارد.</p>
+      <div class="method-modal-btns">
+        <button class="btn btn-primary" data-method-pick="card" style="padding: 0.8rem;">کارت به کارت عادی</button>
+        <button class="btn btn-primary" data-method-pick="paya" style="padding: 0.8rem;">بین بانکی (پایا)</button>
+        <button class="btn btn-secondary" data-method-pick="" style="padding: 0.8rem;">پیش‌فرض (روش انتخاب‌شده در صفحهٔ اصلی)</button>
+        <button class="btn btn-secondary" id="method-modal-cancel" style="padding: 0.8rem;">انصراف</button>
+      </div>
+    </div>
+  </div>
+
   <div class="modal-overlay" id="amount-modal">
     <div class="modal">
       <div class="modal-icon" style="background: linear-gradient(135deg, #f59e0b, #d97706);">💰</div>
@@ -1446,6 +1510,18 @@
   </div>
 
   <!-- History delete confirm -->
+  <div class="modal-overlay" id="stop-confirm-modal">
+    <div class="modal">
+      <div class="modal-icon" style="background: linear-gradient(135deg, #ef4444, #b91c1c);">⏹</div>
+      <h3>توقف انتقال</h3>
+      <p>مرورگر و سشن‌ها بسته می‌شوند و کارت‌های اجرانشده «باقی‌مانده» می‌مانند. اگر کارتی همین الان وسط انتقال باشد، قبل از ادامه موجودی/اپ بانک را بررسی کنید تا واریز تکراری نشود.</p>
+      <div style="display: flex; gap: 0.6rem; width: 100%;">
+        <button class="btn btn-danger" id="stop-confirm-yes" style="flex: 1; padding: 0.85rem;">بله، متوقف شود</button>
+        <button class="btn btn-secondary" id="stop-confirm-no" style="flex: 1; padding: 0.85rem;">ادامه بده</button>
+      </div>
+    </div>
+  </div>
+
   <div class="modal-overlay" id="history-confirm-modal">
     <div class="modal">
       <div class="modal-icon" style="background: linear-gradient(135deg, #ef4444, #b91c1c);">🗑</div>
@@ -1558,7 +1634,8 @@
       blueUsername: 'haj_ashkan_blue_username',
       bluePassword: 'haj_ashkan_blue_password',
       nextId: 'haj_ashkan_next_id',
-      showBrowser: 'haj_ashkan_show_browser'
+      showBrowser: 'haj_ashkan_show_browser',
+      transferMethod: 'haj_ashkan_transfer_method'
     };
 
     // ========== State ==========
@@ -1594,7 +1671,8 @@
         cards: primaryCards,
         username: document.getElementById('blue-username').value.trim(),
         password: document.getElementById('blue-password').value,
-        showBrowser: document.getElementById('show-browser-toggle').checked
+        showBrowser: document.getElementById('show-browser-toggle').checked,
+        transferMethod: getSettingsMethod()
       });
     }
 
@@ -1653,6 +1731,10 @@
         document.getElementById('blue-username').value = u;
         document.getElementById('blue-password').value = pw;
         document.getElementById('show-browser-toggle').checked = localStorage.getItem(STORAGE.showBrowser) === '1';
+        const tm = localStorage.getItem(STORAGE.transferMethod) === 'paya' ? 'paya' : 'card';
+        setSettingsMethod(tm);
+        runMethod = tm;
+        renderRunMethod();
         updateCredentialHints(u, pw);
       } catch (e) {
         primaryCards = [];
@@ -1677,6 +1759,9 @@
       localStorage.setItem(STORAGE.blueUsername, u);
       localStorage.setItem(STORAGE.bluePassword, pw);
       localStorage.setItem(STORAGE.showBrowser, document.getElementById('show-browser-toggle').checked ? '1' : '0');
+      localStorage.setItem(STORAGE.transferMethod, getSettingsMethod());
+      runMethod = getSettingsMethod();
+      renderRunMethod();
       updateCredentialHints(u, pw);
     }
 
@@ -1796,7 +1881,7 @@
               ${prefix === 'secondary' ? secondaryExtras(card) : ''}
             </div>
             <div class="card-actions">
-              ${prefix === 'secondary' ? `<button class="btn btn-amount" data-action="amount" data-id="${card.id}" data-prefix="${prefix}">مبلغ 💰</button>` : ''}
+              ${prefix === 'secondary' ? `<button class="btn btn-amount" data-action="amount" data-id="${card.id}" data-prefix="${prefix}">مبلغ 💰</button><button class="btn btn-amount" data-action="method" data-id="${card.id}" data-prefix="${prefix}">روش 🏦</button>` : ''}
               <button class="btn btn-danger" data-action="delete" data-id="${card.id}" data-prefix="${prefix}">حذف 🗑</button>
               <button class="btn btn-edit" data-action="edit" data-id="${card.id}" data-prefix="${prefix}">ویرایش ✎</button>
             </div>
@@ -1847,6 +1932,8 @@
 
       if (action === 'amount') {
         openAmountModal(id);
+      } else if (action === 'method') {
+        openMethodModal(id);
       } else if (action === 'edit') {
         if (isPrimary) editingPrimaryId = id;
         else editingSecondaryId = id;
@@ -2062,11 +2149,7 @@
 
     document.getElementById('save-settings-btn').addEventListener('click', function(e) {
       createRipple(e, this);
-      // اعتبارسنجی شماره کارت‌های لیست اصلی
-      if (primaryCards.length === 0) {
-        showToast('حداقل یک کارت در لیست اصلی لازم است', '⚠️');
-        return;
-      }
+      // اعتبارسنجی شماره کارت‌های لیست اصلی (ذخیره با لیست خالی مجاز است)
       const invalid = findInvalidCards(primaryCards);
       if (invalid.length > 0) {
         showToast('شماره کارت نباید خام باشد — همه کارت‌ها باید ۱۶ رقم واقعی داشته باشند', '⚠️');
@@ -2093,6 +2176,60 @@
       }
     });
 
+    // ========== روش انتقال ==========
+    const METHOD_LABELS = { blu: 'بلو به بلو', card: 'کارت به کارت عادی', paya: 'بین بانکی (پایا)' };
+    let runMethod = 'card'; // روش پیش‌فرض همین اجرا (از تنظیمات شروع می‌شود)
+
+    function getSettingsMethod() {
+      const r = document.querySelector('input[name="transfer-method"]:checked');
+      return r && r.value === 'paya' ? 'paya' : 'card';
+    }
+
+    function setSettingsMethod(v) {
+      document.querySelectorAll('input[name="transfer-method"]').forEach(r => { r.checked = (r.value === v); });
+    }
+
+    function renderRunMethod() {
+      document.querySelectorAll('#run-method-seg button').forEach(b =>
+        b.classList.toggle('active', b.dataset.m === runMethod));
+    }
+
+    // ---- مودال روش اختصاصی هر کارت ----
+    let methodModalCardId = null;
+
+    function openMethodModal(id) {
+      const card = secondaryCards.find(c => c.id === id);
+      if (!card) return;
+      methodModalCardId = id;
+      document.getElementById('method-modal-card').textContent = card.number + ' · ' + card.owner;
+      document.getElementById('method-modal').classList.add('show');
+    }
+
+    function closeMethodModal() {
+      document.getElementById('method-modal').classList.remove('show');
+      methodModalCardId = null;
+    }
+
+    document.getElementById('method-modal').addEventListener('click', function(e) {
+      if (e.target === this) { closeMethodModal(); return; }
+      const b = e.target.closest('[data-method-pick]');
+      if (!b) return;
+      const card = secondaryCards.find(c => c.id === methodModalCardId);
+      if (!card) { closeMethodModal(); return; }
+      const v = b.dataset.methodPick;
+      if (v === 'card' || v === 'paya') {
+        card.method = v;
+        showToast('روش این حساب: ' + METHOD_LABELS[v], '🏦');
+      } else {
+        delete card.method;
+        showToast('این حساب روش پیش‌فرض را می‌گیرد', '↺');
+      }
+      saveSecondary();
+      closeMethodModal();
+      renderSecondaryCards();
+    });
+    document.getElementById('method-modal-cancel').addEventListener('click', closeMethodModal);
+
     // ========== وضعیت ردیف‌ها، مبلغ اختصاصی، ادامه، سوابق ==========
     function escapeHtml(v) {
       return String(v == null ? '' : v).replace(/[&<>"']/g, ch =>
@@ -2114,22 +2251,25 @@
     }
 
     function isRemaining(rs) {
-      return !!rs && (rs.status === 'skipped' || (rs.status === 'failed' && !!rs.interrupted));
+      return !!rs && (rs.status === 'skipped' || (rs.status === 'failed' && (!!rs.interrupted || !!rs.remaining)));
     }
 
     function secondaryExtras(card) {
+      // وضعیت فقط از اجرای همین نشست برنامه می‌آید (بعد از بستن و باز کردن برنامه خالی است تا یک بار اجرا شود)
       const rs = runStatus[normalizeCardDigits(card.number)];
       const own = parseAmount(card.amount);
       const chip = own > 0
         ? `<span class="amount-chip custom">مبلغ اختصاصی: ${fmtAmount(own)} ریال</span>`
         : `<span class="amount-chip">مبلغ: پیش‌فرض</span>`;
+      const wantedMethod = card.method || runMethod;
+      const methodChip = `<span class="amount-chip method">روش: ${METHOD_LABELS[wantedMethod] || wantedMethod}${card.method ? ' (اختصاصی)' : ''}</span>`;
       let badge = '<span class="row-status none">بدون وضعیت</span>';
       let note = '';
       if (rs) {
         if (rs.status === 'success') {
-          badge = `<span class="row-status success">✓ موفق · ${fmtAmount(rs.amount)} ریال واریز شد</span>`;
+          badge = `<span class="row-status success">✓ موفق · ${fmtAmount(rs.amount)} ریال واریز شد${rs.method ? ' · ' + (METHOD_LABELS[rs.method] || rs.method) : ''}</span>`;
         } else if (rs.status === 'failed') {
-          badge = `<span class="row-status failed">✕ ناموفق${rs.interrupted ? ' (وسط خطا قطع شد)' : ''}</span>`;
+          badge = `<span class="row-status failed">✕ ناموفق${rs.remaining ? ' (بلو رد کرد) — باقی‌مانده' : (rs.interrupted ? ' (وسط خطا قطع شد)' : '')}</span>`;
           if (rs.message) note = `<div class="row-note">${escapeHtml(rs.message)}</div>`;
         } else if (rs.status === 'skipped') {
           badge = '<span class="row-status skipped">⏸ هنوز اجرا نشده (مانده)</span>';
@@ -2137,7 +2277,7 @@
           badge = '<span class="row-status processing">در حال انتقال...</span>';
         }
       }
-      return `<div class="row-meta">${chip}${badge}</div>${note}`;
+      return `<div class="row-meta">${chip}${methodChip}${badge}</div>${note}`;
     }
 
     // وضعیت کارت‌های انتقال فعلی را در runStatus (برای نمایش در صفحهٔ اصلی) ثبت می‌کند
@@ -2150,7 +2290,9 @@
             status: r.status,
             message: r.message || '',
             amount: r.amount || 0,
-            interrupted: !!r.interrupted
+            interrupted: !!r.interrupted,
+            remaining: !!r.remaining,
+            method: r.method_used || ''
           };
         } else if (r.status === 'pending') {
           delete runStatus[d];
@@ -2170,7 +2312,8 @@
             number: c.number,
             owner: c.owner,
             amount: own > 0 ? own : (rs.amount || defaultAmt),
-            interrupted: !!rs.interrupted
+            interrupted: !!rs.interrupted,
+            method: c.method || ''
           };
         });
     }
@@ -2276,7 +2419,8 @@
       const defaultAmt = parseAmount(document.getElementById('amount').value);
       const cards = continueCards.map(c => ({
         id: c.id, number: c.number, owner: c.owner,
-        amount: c.amount > 0 ? c.amount : defaultAmt
+        amount: c.amount > 0 ? c.amount : defaultAmt,
+        method: c.method || ''
       }));
       if (cards.some(c => !(c.amount > 0))) {
         showToast('برای ادامه، مبلغ پیش‌فرض یا مبلغ اختصاصی کارت‌ها را وارد کنید', '⚠️');
@@ -2299,10 +2443,10 @@
     function leaveTransferPage() {
       stopTransferPoll();
       showPage('page-main');
-      if (lastJobHadError) {
+      if (lastJobHadError || transferResults.some(r => r.remaining)) {
         const remaining = transferResults
-          .filter(r => r.status === 'skipped' || (r.status === 'failed' && r.interrupted))
-          .map(r => ({ id: r.id, number: r.number, owner: r.owner, amount: r.amount, interrupted: !!r.interrupted }));
+          .filter(r => r.status === 'skipped' || (r.status === 'failed' && (r.interrupted || r.remaining)))
+          .map(r => ({ id: r.id, number: r.number, owner: r.owner, amount: r.amount, interrupted: !!r.interrupted, method: r.method || '' }));
         if (remaining.length) openContinueModal(remaining);
       }
     }
@@ -2349,6 +2493,7 @@
             <div class="card-info">
               <div class="card-number">${escapeHtml(h.number)}</div>
               <div class="card-owner">${escapeHtml(h.owner)}</div>
+              ${h.method ? `<div class="transfer-item-msg">روش: ${escapeHtml(METHOD_LABELS[h.method] || h.method)}</div>` : ''}
               <div class="transfer-item-amount ${ok ? 'ok' : 'bad'}">${ok ? 'واریز شد' : 'واریز نشد'} · ${fmtAmount(h.amount)} ریال</div>
               ${h.message ? `<div class="transfer-item-msg">${escapeHtml(h.message)}</div>` : ''}
               <div class="history-date">${toPersianDigits(escapeHtml(h.jdate))}</div>
@@ -2413,6 +2558,7 @@
           body: JSON.stringify(target === 'all' ? {} : { id: target })
         });
         if (!res.ok) throw await apiError(res);
+        if (target === 'all') runStatus = {};
         showToast(target === 'all' ? 'همهٔ سوابق پاک شد' : 'سابقه حذف شد', '🗑');
         await loadHistory();
       } catch (err) {
@@ -2509,7 +2655,11 @@
         const el = document.createElement('div');
         el.className = 'transfer-item ' + (item.status || 'pending');
         const badgeClass = item.status || 'pending';
-        const badgeText = STATUS_LABEL[badgeClass] || badgeClass;
+        const badgeText = (item.status === 'failed' && item.remaining) ? 'باقی‌مانده' : (STATUS_LABEL[badgeClass] || badgeClass);
+        const shownMethod = item.method_used || item.method || '';
+        const methodLine = shownMethod
+          ? `<div class="transfer-item-msg">${item.method_used ? 'روش انجام‌شده' : 'روش انتخابی'}: ${METHOD_LABELS[shownMethod] || shownMethod}</div>`
+          : '';
         const spinner = item.status === 'processing' ? '<span class="mini-spinner"></span>' : '';
         let amountLine = '';
         if (item.amount) {
@@ -2525,13 +2675,48 @@
           <div class="card-info">
             <div class="card-number">${item.number}</div>
             <div class="card-owner">${item.owner || 'مالک حساب'} · کارت ${toPersianDigits(index + 1)}</div>
-            ${amountLine}${msg}
+            ${amountLine}${methodLine}${msg}
           </div>
           <span class="transfer-status-badge ${badgeClass}">${spinner}${badgeText}</span>
         `;
         list.appendChild(el);
       });
     }
+
+    // ---- دکمهٔ توقف انتقال ----
+    function setStopBtn(show) {
+      const b = document.getElementById('transfer-stop-btn');
+      if (!b) return;
+      b.style.display = show ? 'block' : 'none';
+      b.disabled = false;
+      b.textContent = '⏹ توقف انتقال و بستن سشن‌ها';
+    }
+
+    document.getElementById('transfer-stop-btn').addEventListener('click', function(e) {
+      createRipple(e, this);
+      document.getElementById('stop-confirm-modal').classList.add('show');
+    });
+    document.getElementById('stop-confirm-no').addEventListener('click', function(e) {
+      createRipple(e, this);
+      document.getElementById('stop-confirm-modal').classList.remove('show');
+    });
+    document.getElementById('stop-confirm-yes').addEventListener('click', async function(e) {
+      createRipple(e, this);
+      document.getElementById('stop-confirm-modal').classList.remove('show');
+      if (!transferJobId) return;
+      const b = document.getElementById('transfer-stop-btn');
+      b.disabled = true;
+      b.textContent = 'در حال توقف...';
+      try {
+        const res = await fetch('/api/transfer/stop/' + encodeURIComponent(transferJobId), { method: 'POST' });
+        if (!res.ok) throw await apiError(res);
+        showToast('درخواست توقف ثبت شد؛ سشن‌ها بسته می‌شوند', '⏹');
+      } catch (err) {
+        b.disabled = false;
+        b.textContent = '⏹ توقف انتقال و بستن سشن‌ها';
+        showToast(err.message || 'ثبت درخواست توقف ممکن نشد', '⚠️');
+      }
+    });
 
     // ---- اعلان‌های لحظه‌ای (OTP درست/اشتباه) ----
     let lastNoticeSeq = 0;
@@ -2540,10 +2725,10 @@
     function showTransferNotice(kind, text) {
       const box = document.getElementById('transfer-notice');
       box.className = 'transfer-notice show ' + kind;
-      document.getElementById('transfer-notice-icon').textContent = kind === 'otp_ok' ? '✓' : '✕';
+      document.getElementById('transfer-notice-icon').textContent = kind === 'otp_ok' ? '✓' : (kind === 'method' ? 'ℹ' : '✕');
       document.getElementById('transfer-notice-text').textContent = text;
       clearTimeout(noticeHideTimer);
-      if (kind === 'otp_ok') {
+      if (kind !== 'otp_wrong') {
         noticeHideTimer = setTimeout(() => box.classList.remove('show'), 7000);
       }
     }
@@ -2560,7 +2745,7 @@
       if (!n || !n.seq || n.seq <= lastNoticeSeq) return;
       lastNoticeSeq = n.seq;
       showTransferNotice(n.kind, n.text);
-      showToast(n.text, n.kind === 'otp_ok' ? '✓' : '⚠️');
+      showToast(n.text, n.kind === 'otp_ok' ? '✓' : (n.kind === 'method' ? 'ℹ️' : '⚠️'));
     }
 
     function updateTransferUI(data) {
@@ -2641,6 +2826,7 @@
         }
         document.getElementById('transfer-done-btn').style.display = 'block';
         document.getElementById('transfer-back-btn').style.display = 'flex';
+        setStopBtn(false);
         stopTransferPoll();
       } else if (processing) {
         showOtpModal(false);
@@ -2712,6 +2898,7 @@
       transferResults = [];
       document.getElementById('transfer-done-btn').style.display = 'none';
       document.getElementById('transfer-back-btn').style.display = 'none';
+      setStopBtn(true);
       document.getElementById('transfer-current-box').classList.remove('done', 'error');
       showOtpModal(false);
       showPage('page-transfer');
@@ -2792,11 +2979,13 @@
         number: c.number,
         owner: c.owner,
         amount: c.amount,
+        method: c.method || runMethod,
         status: 'pending',
         message: ''
       }));
       document.getElementById('transfer-done-btn').style.display = 'none';
       document.getElementById('transfer-back-btn').style.display = 'none';
+      setStopBtn(true);
       document.getElementById('progress-bar-fill').style.width = '0%';
       document.getElementById('transfer-current-box').classList.remove('done', 'error');
       document.getElementById('transfer-subtitle').textContent = 'لطفاً تا پایان عملیات صبر کنید';
@@ -2806,11 +2995,13 @@
 
       // یوزر/پسورد بلو دیگر از مرورگر فرستاده نمی‌شود؛ سرور از دیتابیس (پروفایل) می‌خواند
       const payload = {
+        method: runMethod,
         cards: cards.map(c => ({
           id: c.id,
           number: c.number.replace(/-/g, ''),
           owner: c.owner,
-          amount: c.amount
+          amount: c.amount,
+          method: c.method || ''
         }))
       };
 

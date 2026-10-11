@@ -14,30 +14,49 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import ElementClickInterceptedException
 
 # مسیرها نسبت به همین فایل هستند تا از هر جایی (مثلاً از app.py) درست کار کنند
-CODE_DIR = os.path.dirname(os.path.abspath(__file__))
+if getattr(sys, "frozen", False):
+    # نسخهٔ exe: پروفایل کروم، دیباگ و درایورها کنار فایل exe هستند
+    ROOT_DIR = os.path.dirname(os.path.abspath(sys.executable))
+    CODE_DIR = ROOT_DIR
+else:
+    CODE_DIR = os.path.dirname(os.path.abspath(__file__))
+    ROOT_DIR = os.path.dirname(CODE_DIR)
 CHROME_PROFILE_DIR = os.getenv("CHROME_PROFILE_DIR", os.path.join(CODE_DIR, "chrome-profile"))  # سشن ورود بلو اینجا می‌ماند
 
-ROOT_DIR = os.path.dirname(CODE_DIR)
+
+def _windows_folders():
+    """نام پوشه‌های درایور (داخل drivers/) را بر اساس نسخهٔ ویندوز، به ترتیب اولویت برمی‌گرداند.
+    ویندوز ۷ و ۸ و ۸.۱ (نسخهٔ 6.x) ← پوشهٔ ویندوز ۷-۸ ؛ ویندوز ۱۰ و ۱۱ (نسخهٔ 10+) ← پوشهٔ ویندوز ۱۰-۱۱.
+    اگر پوشهٔ مخصوص پیدا نشد، پوشهٔ عمومی «windows» هم امتحان می‌شود."""
+    try:
+        major = sys.getwindowsversion().major
+    except Exception:
+        major = 10
+    if major >= 10:
+        return ["windows-10-11", "windows10-11", "windows10", "windows"]
+    return ["windows-7-8", "windows7-8", "windows7", "windows"]
 
 
 def find_driver():
-    """درایور مناسب سیستم‌عامل فعلی را از داخل فولدر پروژه پیدا می‌کند (یا None).
+    """درایور مناسب سیستم‌عامل (و نسخهٔ ویندوز) را از داخل فولدر پروژه پیدا می‌کند (یا None).
 
-    ساختار پیشنهادی (هر دو را می‌توانی هم‌زمان بگذاری):
-        blu/drivers/windows/chromedriver.exe
+    ساختار پیشنهادی:
+        blu/drivers/windows-10-11/chromedriver.exe   (ویندوز ۱۰ و ۱۱)
+        blu/drivers/windows-7-8/chromedriver.exe     (ویندوز ۷ و ۸)
         blu/drivers/linux/chromedriver
+        blu/drivers/mac/chromedriver
     کنار app.py (chromedriver یا chromedriver.exe) هم پیدا می‌شود.
     اگر پیدا نشد None برمی‌گردد و Selenium Manager خودکار دانلود می‌کند.
     """
     if sys.platform.startswith("win"):
-        folder, name = "windows", "chromedriver.exe"
+        folders, name = _windows_folders(), "chromedriver.exe"
     elif sys.platform == "darwin":
-        folder, name = "mac", "chromedriver"
+        folders, name = ["mac"], "chromedriver"
     else:
-        folder, name = "linux", "chromedriver"
+        folders, name = ["linux"], "chromedriver"
 
-    candidates = [
-        os.path.join(ROOT_DIR, "drivers", folder, name),
+    candidates = [os.path.join(ROOT_DIR, "drivers", f, name) for f in folders]
+    candidates += [
         os.path.join(ROOT_DIR, "drivers", name),
         os.path.join(ROOT_DIR, name),
         os.path.join(CODE_DIR, name),

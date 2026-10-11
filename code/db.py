@@ -7,6 +7,7 @@ app.py از روی لیست اصلی ساخته می‌شود.
 import os
 import re
 import sqlite3
+import sys
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 
@@ -14,7 +15,11 @@ from datetime import datetime, timedelta, timezone
 TEHRAN_TZ = timezone(timedelta(hours=3, minutes=30))
 
 CODE_DIR = os.path.dirname(os.path.abspath(__file__))
-ROOT_DIR = os.path.dirname(CODE_DIR)
+if getattr(sys, "frozen", False):
+    # نسخهٔ exe: دیتابیس کنار فایل exe ذخیره می‌شود (نه در پوشهٔ موقت)
+    ROOT_DIR = os.path.dirname(os.path.abspath(sys.executable))
+else:
+    ROOT_DIR = os.path.dirname(CODE_DIR)
 DB_PATH = os.path.join(ROOT_DIR, "database", "blu.db")
 
 # فقط لیست اصلی در دیتابیس ذخیره می‌شود؛ لیست فرعی عمداً ذخیره نمی‌شود

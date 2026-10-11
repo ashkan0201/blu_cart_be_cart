@@ -1283,7 +1283,7 @@
       </div>
 
       <button class="save-settings-btn" id="save-settings-btn">
-        💾 ذخیره اطلاعات و همگام‌سازی با صفحه اصلی
+        💾 ذخیره اطلاعات
       </button>
     </div>
 
@@ -1404,7 +1404,7 @@
     <div class="modal">
       <div class="modal-icon" style="background: linear-gradient(135deg, #a855f7, #7c3aed);">💾</div>
       <h3>تأیید ذخیره</h3>
-      <p>آیا از ذخیره اطلاعات و همگام‌سازی لیست اصلی با صفحه اصلی مطمئن هستید؟</p>
+      <p>آیا از ذخیره اطلاعات مطمئن هستید؟ (لیست فرعی تغییر نمی‌کند)</p>
       <div style="display: flex; gap: 0.6rem; width: 100%;">
         <button class="btn btn-primary" id="confirm-save-yes" style="flex: 1; padding: 0.85rem;">بله، ذخیره شود</button>
         <button class="btn btn-secondary" id="confirm-save-no" style="flex: 1; padding: 0.85rem;">انصراف</button>
@@ -2096,17 +2096,18 @@
       // خواندن مجدد لیست اصلی از localStorage (آخرین نسخه ذخیره شده)
       try {
         const p = localStorage.getItem(STORAGE.primaryCards);
-        const primary = p ? JSON.parse(p) : [];
-        if (primary.length === 0) {
-          showToast('لیست اصلی خالی است — ابتدا در پروفایل ذخیره کنید', '⚠️');
+        if (p === null) {
+          showToast('لیست اصلی هنوز ذخیره نشده — ابتدا در پروفایل ذخیره کنید', '⚠️');
           return;
         }
+        const primary = JSON.parse(p) || [];
+        // لیست اصلی ذخیره‌شده خالی هم باشد، لیست فرعی باید خالی شود
         secondaryCards = deepClone(primary);
         secondaryCards.forEach(c => { c.id = nextId++; });
         saveSecondary();
         editingSecondaryId = null;
         renderSecondaryCards();
-        showToast('لیست فرعی از لیست اصلی به‌روز شد', '🔄');
+        showToast(primary.length === 0 ? 'لیست اصلی خالی است؛ لیست فرعی هم خالی شد' : 'لیست فرعی از لیست اصلی به‌روز شد', '🔄');
       } catch (err) {
         showToast('خطا در بارگذاری لیست اصلی', '⚠️');
       }
@@ -2129,15 +2130,9 @@
     function applySaveAndSync() {
       saveCredentials();
       savePrimary();
-      // همگام‌سازی: لیست فرعی را از لیست اصلی کپی کن
-      secondaryCards = deepClone(primaryCards);
-      // آی‌دی‌های جدید برای جلوگیری از تداخل در ویرایش مستقل
-      secondaryCards.forEach(c => {
-        c.id = nextId++;
-      });
-      saveSecondary();
+      // لیست فرعی عمداً دست‌نخورده می‌ماند؛ فقط با دکمهٔ «به‌روزرسانی» از لیست اصلی خوانده می‌شود
       refreshSnapshot();
-      showToast('اطلاعات ذخیره و با صفحه اصلی همگام شد', '💾');
+      showToast('اطلاعات ذخیره شد (لیست فرعی تغییری نکرد)', '💾');
       const goMain = window._afterConfirmSaveGoMain;
       window._afterConfirmSaveGoMain = false;
       if (goMain) {
@@ -2710,7 +2705,6 @@
       try {
         const res = await fetch('/api/transfer/stop/' + encodeURIComponent(transferJobId), { method: 'POST' });
         if (!res.ok) throw await apiError(res);
-        showToast('درخواست توقف ثبت شد؛ سشن‌ها بسته می‌شوند', '⏹');
       } catch (err) {
         b.disabled = false;
         b.textContent = '⏹ توقف انتقال و بستن سشن‌ها';
@@ -2745,7 +2739,6 @@
       if (!n || !n.seq || n.seq <= lastNoticeSeq) return;
       lastNoticeSeq = n.seq;
       showTransferNotice(n.kind, n.text);
-      showToast(n.text, n.kind === 'otp_ok' ? '✓' : (n.kind === 'method' ? 'ℹ️' : '⚠️'));
     }
 
     function updateTransferUI(data) {
@@ -3021,7 +3014,6 @@
         .catch(err => {
           if (err.status === 409 && err.data && err.data.job_id) {
             // یک انتقال دیگر در حال اجراست؛ به همان وصل می‌شویم
-            showToast('یک انتقال دیگر در حال اجراست — وضعیت همان نمایش داده می‌شود', 'ℹ️');
             attachToJob(err.data.job_id);
             return;
           }
@@ -3042,14 +3034,12 @@
       }
       if (!transferJobId) {
         showOtpModal(false);
-        showToast('OTP ثبت شد (بدون سرور)', '✓');
         return;
       }
       const btn = document.getElementById('otp-modal-submit');
       try {
         btn.disabled = true;
         const data = await submitTransferOtp(transferJobId, otp);
-        showToast('OTP ارسال شد', '✓');
         showOtpModal(false);
         updateTransferUI(data);
         if (!transferPollTimer && data.status !== 'completed' && data.status !== 'failed') {
@@ -3070,7 +3060,6 @@
     document.getElementById('otp-modal-cancel').addEventListener('click', function(e) {
       createRipple(e, this);
       showOtpModal(false);
-      showToast('منتظر پاسخ سرور می‌مانیم', 'ℹ️');
     });
     document.getElementById('otp-modal').addEventListener('click', function(e) {
       if (e.target === this) {

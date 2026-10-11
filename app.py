@@ -10,6 +10,9 @@ from flask import Flask, Response, jsonify, request
 from werkzeug.exceptions import HTTPException
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+if getattr(sys, "frozen", False):
+    # نسخهٔ exe: templates و static داخل بستهٔ برنامه‌اند (sys._MEIPASS)
+    BASE_DIR = getattr(sys, "_MEIPASS", BASE_DIR)
 CODE_DIR = os.path.join(BASE_DIR, "code")
 sys.path.insert(0, CODE_DIR)
 
@@ -271,12 +274,8 @@ def run_job(job_id: str, username: str, password: str, amount: int, headless=Non
                 item["method_used"] = detail
                 label = METHOD_LABEL.get(detail, detail)
                 item["message"] = f"روش انتقال: {label}"
-                if detail == "blu" and item.get("method") != "blu":
-                    set_notice("method", f"کارت {item['number']}: حساب بلو بود؛ با «بلو به بلو» انجام می‌شود")
-                elif item.get("method") == "paya" and detail == "card":
-                    set_notice("method", f"کارت {item['number']}: پایا در دسترس نبود؛ با «کارت به کارت عادی» انجام می‌شود")
-                else:
-                    set_notice("method", f"کارت {item['number']}: روش «{label}»")
+                # اعلان روش برای همهٔ روش‌ها یک قالب دارد (فقط نام روشِ واقعاً انجام‌شده فرق می‌کند)
+                set_notice("method", f"کارت {item['number']}: روش «{label}»")
             elif event == "otp_ok":
                 job["otp_retry"] = False
                 set_notice("otp_ok", "کد تأیید درست بود ✓")
@@ -296,9 +295,9 @@ def run_job(job_id: str, username: str, password: str, amount: int, headless=Non
                 record_result(item, "failed", item["message"])
             elif event == "card_done":
                 item["status"] = "success"
-                item["message"] = f"انتقال انجام شد — {detail}" if detail else "انتقال با موفقیت انجام شد"
+                item["message"] = "انتقال با موفقیت انجام شد"
                 job["success_count"] += 1
-                record_result(item, "success", detail or "انتقال با موفقیت انجام شد")
+                record_result(item, "success", "انتقال با موفقیت انجام شد")
                 label = METHOD_LABEL.get(item.get("method_used"), "")
                 if label:
                     set_notice("otp_ok", f"کارت {item['number']} با روش «{label}» انجام شد ✓")
@@ -523,6 +522,59 @@ def api_transfer_otp():
         return jsonify(job_payload(job))
 
 
+def _find_chrome():
+    """مسیر chrome.exe را (ویندوز) پیدا می‌کند؛ اگر پیدا نشد None."""
+    if not sys.platform.startswith("win"):
+        return None
+    try:
+        import winreg
+        for root in (winreg.HKEY_LOCAL_MACHINE, winreg.HKEY_CURRENT_USER):
+            try:
+                with winreg.OpenKey(
+                        root, r"SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\chrome.exe") as k:
+                    path = winreg.QueryValue(k, None)
+                    if path and os.path.isfile(path):
+                        return path
+            except OSError:
+                pass
+    except Exception:
+        pass
+    for env in ("PROGRAMFILES", "PROGRAMFILES(X86)", "LOCALAPPDATA"):
+        base = os.environ.get(env)
+        if base:
+            path = os.path.join(base, "Google", "Chrome", "Application", "chrome.exe")
+            if os.path.isfile(path):
+                return path
+    return None
+
+
+def _open_browser(url):
+    """سایت را با گوگل کروم باز می‌کند (نه مرورگر پیش‌فرض که ممکن است اینترنت اکسپلورر باشد)؛
+    اگر کروم پیدا نشد، مرورگر پیش‌فرض."""
+    import subprocess
+    import webbrowser
+    chrome = _find_chrome()
+    if chrome:
+        try:
+            subprocess.Popen([chrome, url])
+            return
+        except Exception:
+            pass
+    try:
+        webbrowser.open(url)
+    except Exception:
+        pass
+
+
 if __name__ == "__main__":
-    print("Server on http://0.0.0.0:5000")
-    app.run(host="0.0.0.0", port=8080, debug=False, threaded=True)
+    PORT = 8080
+    URL = f"http://127.0.0.1:{PORT}"
+    print(f"Server on {URL}  (این پنجره را نبندید؛ با بستن آن برنامه متوقف می‌شود)")
+    # چند لحظه بعد از بالا آمدن سرور، سایت خودکار در مرورگر پیش‌فرض باز می‌شود
+    threading.Timer(1.5, _open_browser, args=(URL,)).start()
+    try:
+        app.run(host="0.0.0.0", port=PORT, debug=False, threaded=True)
+    except OSError as e:
+        print(f"اجرای سرور ممکن نشد: {e}")
+        print(f"احتمالاً برنامه از قبل باز است یا پورت {PORT} در اختیار برنامهٔ دیگری است.")
+        input("برای بستن Enter بزنید...")
